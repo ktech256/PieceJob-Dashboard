@@ -1,105 +1,167 @@
 "use client";
 
-import { useState } from 'react';
-import { Eye, ShieldAlert, Zap, UserX, Gps } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import api from '@/lib/api/axios';
+import { useCountryStore } from '@/lib/store/countryStore';
+import {
+  ShieldAlert,
+  Zap,
+  Eye,
+  MapPin,
+  Smartphone,
+  MessageSquareWarning,
+  AlertTriangle,
+  RefreshCcw
+} from 'lucide-react';
 
-export default function FraudMonitoring() {
+export default function FraudIntelligence() {
+  const [activeTab, setActiveTab] = useState("telemetry");
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-black text-gray-800 mb-8 uppercase tracking-tight flex items-center gap-3">
-        <ShieldAlert className="text-red-600" />
-        FraudSense Intelligence
-      </h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Fraud Summary */}
-        <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                    <h3 className="text-sm font-black uppercase text-gray-500 tracking-wider">High Risk Alerts</h3>
-                    <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded">Action Required</span>
-                </div>
-                <div className="divide-y">
-                    {[
-                        { type: 'GPS_SPOOFING', actor: 'P-902 (Johannesburg)', details: 'Velocity: 240km/h detected between pings.', status: 'SHADOW_BANNED' },
-                        { type: 'MULTI_ACCOUNT', actor: 'C-441 & C-445', details: 'Matching IMEI detected for separate registrations.', status: 'FLAGGED' },
-                        { type: 'REFERRAL_FARMING', actor: 'P-881', details: '15 referrals from identical IP subnets.', status: 'INVESTIGATING' }
-                    ].map((alert, i) => (
-                        <div key={i} className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                            <div className="flex gap-4 items-start">
-                                <div className="p-2 bg-red-50 text-red-600 rounded-lg shrink-0">
-                                    {alert.type === 'GPS_SPOOFING' ? <Gps size={18} /> : <UserX size={18} />}
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <p className="font-bold text-sm uppercase">{alert.type}</p>
-                                        <span className="text-[8px] font-black bg-gray-900 text-white px-1.5 rounded">{alert.status}</span>
-                                    </div>
-                                    <p className="text-xs font-medium text-gray-800">{alert.actor}</p>
-                                    <p className="text-xs text-gray-500 mt-1">{alert.details}</p>
-                                </div>
-                            </div>
-                            <button className="p-2 text-gray-400 hover:text-brand-customer-red transition-colors"><Eye size={18} /></button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="bg-[#0A0A0A] rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-6 flex items-center gap-2">
-                    <Zap className="text-yellow-400" size={20} />
-                    PRICEBOT LIVE STATUS
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="border border-white/10 p-4 rounded-xl">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase">Active Surges</p>
-                        <p className="text-3xl font-black">14 Zones</p>
-                        <p className="text-[10px] text-green-500 font-bold mt-2">+5.2% Daily Yield</p>
-                    </div>
-                    <div className="border border-white/10 p-4 rounded-xl">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase">Avg. Multiplier</p>
-                        <p className="text-3xl font-black">1.4x</p>
-                        <p className="text-[10px] text-gray-500 font-bold mt-2">Target: 1.2x - 1.8x</p>
-                    </div>
-                </div>
-            </div>
+    <div className="space-y-8">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">FraudSense Intelligence</h1>
+          <p className="text-neutral-500 font-medium">Autonomous anti-fraud telemetry and behavior screening.</p>
         </div>
-
-        {/* Global Security Config */}
-        <div className="space-y-6">
-            <div className="bg-white border rounded-2xl p-6 shadow-sm">
-                <h3 className="font-black text-sm mb-6 text-gray-500 uppercase tracking-widest">Autonomous Defense</h3>
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <p className="text-xs font-bold">Auto-Ban GPS Spoofers</p>
-                        <input type="checkbox" defaultChecked className="w-4 h-4 accent-red-600" />
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-xs font-bold">Block Emulator UUIDs</p>
-                        <input type="checkbox" defaultChecked className="w-4 h-4 accent-red-600" />
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-xs font-bold">Velocity Shadow-Ban</p>
-                        <input type="checkbox" defaultChecked className="w-4 h-4 accent-red-600" />
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-xs font-bold">Ref. Harvesting Lock</p>
-                        <input type="checkbox" defaultChecked className="w-4 h-4 accent-red-600" />
-                    </div>
-                </div>
-                <button className="w-full mt-10 border-2 border-gray-900 text-gray-900 py-3 rounded-full text-xs font-black uppercase hover:bg-gray-900 hover:text-white transition-all">
-                    Reset Defense AI
-                </button>
-            </div>
-
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-6">
-                <p className="text-[10px] font-black text-red-600 uppercase mb-2">Internal Warning</p>
-                <p className="text-xs text-red-800 leading-relaxed font-medium">
-                    Suspicious cancellation spikes detected in Namibia (NA-01). FraudSense recommends raising verification level for new customers in this zone.
-                </p>
-            </div>
+        <div className="flex bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
+            <TabButton active={activeTab === "telemetry"} onClick={() => setActiveTab("telemetry")} label="AI Telemetry" />
+            <TabButton active={activeTab === "integrity"} onClick={() => setActiveTab("integrity")} label="Integrity" />
         </div>
       </div>
+
+      {activeTab === "telemetry" && <FraudTelemetry />}
+      {activeTab === "integrity" && <IntegrityTracker />}
     </div>
   );
+}
+
+function FraudTelemetry() {
+    const { countryCode } = useCountryStore();
+    const [alerts, setAlerts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadAlerts = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/api/v1/admin/fraud/alerts?countryCode=${countryCode}`);
+            setAlerts(res.data.alerts || []);
+        } catch (e) {
+            console.error('Failed to load fraud alerts');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (countryCode) loadAlerts();
+    }, [countryCode]);
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-3 space-y-6">
+                <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+                    <div className="p-8 border-b flex justify-between items-center bg-red-50/30">
+                        <div>
+                            <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight flex items-center gap-2">
+                                <AlertTriangle size={18} className="text-red-600" />
+                                High Risk Review Queue
+                            </h3>
+                            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Escrow Release Monitoring (Section 327)</p>
+                        </div>
+                        <button onClick={loadAlerts} className="p-2 bg-white border rounded-xl hover:bg-red-50 transition-all"><RefreshCcw size={16} /></button>
+                    </div>
+                    <div className="divide-y divide-neutral-50">
+                        {loading ? (
+                            <div className="p-10 text-center text-xs font-bold text-neutral-300 uppercase tracking-widest">Scanning logs...</div>
+                        ) : alerts.length === 0 ? (
+                            <div className="p-10 text-center text-neutral-400">No high-risk activity detected in {countryCode}.</div>
+                        ) : (
+                            alerts.map((alert, i) => (
+                                <div key={i} className="p-6 flex justify-between items-center hover:bg-neutral-50/50 transition-all group">
+                                    <div className="flex gap-6 items-start">
+                                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-neutral-100 text-red-600 group-hover:scale-110 transition-all shrink-0">
+                                            <ShieldAlert size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="font-black text-xs uppercase tracking-widest text-neutral-400">SUSPICIOUS_CANCELLATION</p>
+                                                <span className="w-1 h-1 bg-neutral-300 rounded-full"></span>
+                                                <p className="text-[10px] font-bold text-neutral-300 uppercase">{new Date(alert.createdAt).toLocaleTimeString()}</p>
+                                            </div>
+                                            <p className="font-black text-neutral-800 tracking-tight">Job ID: {alert._id.slice(-6)}</p>
+                                            <p className="text-xs text-neutral-400 font-medium mt-1">Customer: {alert.customerId?.firstName || 'Unknown'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="bg-neutral-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all">Audit</button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] rounded-[40px] p-12 text-white shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_#410200_0%,_transparent_60%)]"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-10">
+                             <div className="p-4 bg-brand-customer-red rounded-[24px] text-white">
+                                <Zap size={24} />
+                             </div>
+                             <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">FraudSense Pulse</h3>
+                                <p className="text-neutral-500 font-bold uppercase tracking-[0.2em] text-[9px] mt-2">Workspace Behavior Performance</p>
+                             </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                            <TelemetryCard label="Flagged" value={alerts.length.toString()} sub="Events" color="text-red-500" />
+                            <TelemetryCard label="Bans" value="0" sub="Active" color="text-yellow-500" />
+                            <TelemetryCard label="Isolation" value="Verified" sub={countryCode} color="text-green-500" />
+                            <TelemetryCard label="Engine" value="Production" sub="V3.1" color="text-blue-500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function IntegrityTracker() {
+    return (
+        <div className="bg-white border border-neutral-200 rounded-[40px] p-12 shadow-sm flex flex-col items-center justify-center h-[600px] relative overflow-hidden">
+            <div className="absolute inset-0 bg-neutral-50 opacity-20"></div>
+            <div className="relative z-10 text-center max-w-lg">
+                <Smartphone size={48} className="mx-auto text-neutral-200 mb-6" />
+                <h3 className="text-2xl font-black uppercase text-neutral-800 mb-4">Device Binding Matrix</h3>
+                <p className="text-neutral-400 font-medium mb-12">Tracking hardware IDs to enforce strict 1:1 account integrity.</p>
+                <div className="bg-neutral-100 border-2 border-dashed border-neutral-200 rounded-3xl p-12">
+                    <p className="text-xs font-black uppercase text-neutral-400">Production Device IDs Syncing...</p>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function TelemetryCard({ label, value, sub, color }: { label: string, value: string, sub: string, color: string }) {
+    return (
+        <div>
+            <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">{label}</p>
+            <p className={`text-3xl font-black ${color}`}>{value}</p>
+            <p className="text-[9px] font-bold text-neutral-500 uppercase mt-1">{sub}</p>
+        </div>
+    )
+}
+
+function TabButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase transition-all tracking-widest ${
+                active ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-400 hover:text-neutral-700'
+            }`}
+        >
+            {label}
+        </button>
+    )
 }
