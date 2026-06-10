@@ -56,7 +56,6 @@ export default function SOSHub() {
           <p className="text-neutral-500 font-medium">Crisis response terminal. Real-time intercept of stealth threat triggers.</p>
         </div>
 
-        {/* SECTION 12 & 23: Dashboard Siren Status */}
         <div className={`flex items-center gap-6 px-10 py-4 rounded-[32px] border-4 transition-all ${
             isCrisisActive ? 'bg-red-600 border-red-800 text-white animate-pulse shadow-[0_0_40px_rgba(220,38,38,0.3)]' : 'bg-green-50 border-green-200 text-green-700'
         }`}>
@@ -118,7 +117,7 @@ export default function SOSHub() {
                             </div>
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={() => { /* API Call to Resolve */ }} className="bg-green-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-green-600/20 hover:scale-105 transition-all">Mark Resolved</button>
+                            <button className="bg-green-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-green-600/20 hover:scale-105 transition-all">Mark Resolved</button>
                             <button className="bg-neutral-100 text-neutral-400 p-3 rounded-2xl hover:bg-neutral-200 transition-all"><MoreVertical size={20} /></button>
                         </div>
                     </div>
@@ -142,58 +141,61 @@ export default function SOSHub() {
                             </div>
                         </div>
 
-                    {/* 2. Audio Intercept */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <Mic size={12} className="text-red-600" />
-                            Active Audio Stream
-                        </h4>
-                        <div className="bg-neutral-900 rounded-3xl h-[280px] p-6 flex flex-col justify-between shadow-2xl">
-                            <div className="flex justify-between items-start">
-                                <span className="bg-brand-customer-red text-white text-[8px] font-black px-2 py-0.5 rounded animate-pulse">RECORDING</span>
-                                <span className="text-[10px] font-mono text-neutral-500 tracking-tighter">00:12:45</span>
+                        {/* 2. Audio Intercept */}
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Mic size={12} className="text-red-600" />
+                                Active Audio Stream
+                            </h4>
+                            <div className="bg-neutral-900 rounded-3xl h-[280px] p-6 flex flex-col justify-between shadow-2xl">
+                                <div className="flex justify-between items-start">
+                                    <span className="bg-brand-customer-red text-white text-[8px] font-black px-2 py-0.5 rounded animate-pulse">RECORDING</span>
+                                    <span className="text-[10px] font-mono text-neutral-500 tracking-tighter">00:12:45</span>
+                                </div>
+                                <div className="flex items-center gap-1 h-20">
+                                    {[...Array(12)].map((_, i) => (
+                                        <div key={i} className={`flex-1 bg-brand-customer-red rounded-full animate-bounce`} style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 100}ms` }}></div>
+                                    ))}
+                                </div>
+                                <button className="bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase py-2.5 rounded-xl border border-white/10 transition-all">Play Back Loop</button>
                             </div>
-                            <div className="flex items-center gap-1 h-20">
-                                {[...Array(12)].map((_, i) => (
-                                    <div key={i} className={`flex-1 bg-brand-customer-red rounded-full animate-bounce`} style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 100}ms` }}></div>
-                                ))}
+                        </div>
+
+                        {/* 3. Emergency Contacts */}
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Users size={12} className="text-red-600" />
+                                Dispatch Protocols
+                            </h4>
+                            <div className="space-y-3">
+                                <ProtocolAction label="Notify Nearest 5 Pros" active />
+                                <ProtocolAction label="SMS to Emerg. Contacts" active />
+                                <ProtocolAction label="Local Police Broadcast" />
+                                <ProtocolAction label="Lock Job State" active />
                             </div>
-                            <button className="bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase py-2.5 rounded-xl border border-white/10 transition-all">Play Back Loop</button>
                         </div>
                     </div>
 
-                    {/* 3. Emergency Contacts */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <Users size={12} className="text-red-600" />
-                            Dispatch Protocols
-                        </h4>
-                        <div className="space-y-3">
-                            <ProtocolAction label="Notify Nearest 5 Pros" active />
-                            <ProtocolAction label="SMS to Emerg. Contacts" active />
-                            <ProtocolAction label="Local Police Broadcast" />
-                            <ProtocolAction label="Lock Job State" active />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-neutral-50 border border-neutral-100 rounded-[32px] p-8 flex justify-between items-center">
-                    <div className="flex gap-8">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-xl shadow-sm"><Phone size={14} className="text-neutral-400" /></div>
-                            <div>
-                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Regional Hub</p>
-                                <p className="text-sm font-black text-neutral-800">South Africa (ZA)</p>
+                    <div className="bg-neutral-50 border border-neutral-100 rounded-[32px] p-8 flex justify-between items-center">
+                        <div className="flex gap-8">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-xl shadow-sm"><Phone size={14} className="text-neutral-400" /></div>
+                                <div>
+                                    <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Regional Hub</p>
+                                    <p className="text-sm font-black text-neutral-800">South Africa (ZA)</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-red-600 bg-red-50 px-4 py-2 rounded-2xl border border-red-100">
+                                 <ShieldAlert size={14} />
+                                 <span className="text-[10px] font-black uppercase tracking-widest">Escalated to Support Admin</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 text-red-600 bg-red-50 px-4 py-2 rounded-2xl border border-red-100">
-                             <ShieldAlert size={14} />
-                             <span className="text-[10px] font-black uppercase tracking-widest">Escalated to Support Admin</span>
-                        </div>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] animate-pulse">Waiting for Responder Action...</p>
                     </div>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] animate-pulse">Waiting for Responder Action...</p>
                 </div>
-            </div>
+            ) : (
+                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-[40px] text-neutral-300 font-black uppercase text-sm">Select a ticket to begin mediation</div>
+            )}
         </div>
       </div>
     </div>
@@ -215,8 +217,8 @@ function TabButton({ active, onClick, label }: { active: boolean, onClick: () =>
     return (
         <button
             onClick={onClick}
-            className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase transition-all tracking-widest ${
-                active ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-400 hover:text-neutral-700'
+            className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+                active ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}
         >
             {label}
