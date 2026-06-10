@@ -189,7 +189,7 @@ export default function NotificationCenter() {
 
                       <div className="flex justify-between items-center pt-4 border-t">
                           <div className="flex gap-2">
-                              <span className="text-[8px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded uppercase tracking-tighter cursor-help" title="Dynamic variables available for this template">Variables: {{firstName}}, {{otp}}</span>
+                              <span className="text-[8px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded uppercase tracking-tighter cursor-help" title="Dynamic variables available for this template">Variables: {"{{firstName}}, {{otp}}"}</span>
                           </div>
                           <div className="flex gap-3">
                               <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-neutral-400 hover:text-neutral-900 transition-all">Discard</button>
