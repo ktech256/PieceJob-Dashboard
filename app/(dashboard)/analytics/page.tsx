@@ -34,9 +34,9 @@ export default function AnalyticsDashboard() {
             const breakdownRes = await api.get('/api/admin/analytics/global-breakdown');
             setBreakdown(breakdownRes.data.breakdown);
         }
-    } catch (e) {
-        console.error('Data Fetch Failed', e);
-        setError("Failed to establish neural link with datacentres. Please verify system status.");
+    } catch (e: any) {
+        console.error('Data Fetch Failed:', e.response?.data || e.message);
+        setError(`Neural Link Failure: ${e.response?.data?.message || e.message}. Ensure the backend is reachable at ${api.defaults.baseURL}`);
     } finally {
         setLoading(false);
     }

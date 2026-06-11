@@ -62,6 +62,22 @@ export default function DashboardLayout({
     { name: "Audit Ledger", href: "/audit", icon: <History size={18} /> },
   ];
 
+  const [isApiOk, setIsApiOk] = useState(false);
+
+  useEffect(() => {
+    const checkApi = async () => {
+        try {
+            await api.get('/health');
+            setIsApiOk(true);
+        } catch (e) {
+            setIsApiOk(false);
+        }
+    };
+    checkApi();
+    const interval = setInterval(checkApi, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex h-screen bg-neutral-50 text-neutral-950 font-sans selection:bg-brand-customer-red/10">
       <SirenSystem />
@@ -182,8 +198,8 @@ export default function DashboardLayout({
         <footer className="p-6 border-t bg-white flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-neutral-300">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-brand-provider-green rounded-full animate-pulse"></div>
-                    <span>API: OK</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${isApiOk ? 'bg-brand-provider-green animate-pulse' : 'bg-red-500'}`}></div>
+                    <span>API: {isApiOk ? 'OK' : 'DISCONNECTED'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-brand-provider-green rounded-full animate-pulse"></div>
