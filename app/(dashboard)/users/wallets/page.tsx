@@ -124,9 +124,9 @@ export default function WalletManagement() {
                   </div>
                   <form onSubmit={handleMutate} className="p-10 space-y-6">
                       <div className="space-y-4">
-                          <Input label="Target User ID" onChange={v => setMutation({...mutation, userId: v})} />
+                          <Input label="Target User ID" onChange={(v: string) => setMutation({...mutation, userId: v})} />
                           <div className="grid grid-cols-2 gap-4">
-                              <Input label="Amount (+ or -)" type="number" onChange={v => setMutation({...mutation, amount: parseFloat(v)})} />
+                              <Input label="Amount (+ or -)" type="number" onChange={(v: string) => setMutation({...mutation, amount: parseFloat(v)})} />
                               <div className="space-y-1">
                                   <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Wallet Type</label>
                                   <select
@@ -139,7 +139,7 @@ export default function WalletManagement() {
                                   </select>
                               </div>
                           </div>
-                          <Input label="Mutation Reason (Internal Audit)" onChange={v => setMutation({...mutation, reason: v})} />
+                          <Input label="Mutation Reason (Internal Audit)" onChange={(v: string) => setMutation({...mutation, reason: v})} />
                       </div>
                       <button type="submit" className="w-full bg-neutral-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
                         Commit Mutation to Ledger
@@ -167,7 +167,7 @@ function WalletCard({ label, icon, color }: any) {
     )
 }
 
-function Input({ label, type = "text", onChange }: any) {
+function Input({ label, type = "text", onChange }: { label: string, type?: string, onChange: (v: string) => void }) {
     return (
         <div className="space-y-1">
             <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">{label}</label>
