@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useCountryStore } from "@/lib/store/countryStore";
+import { useCountryStore, Country } from "@/lib/store/countryStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { fetchCountries } from "@/lib/api/countries";
+import { useEffect, useState } from "react";
+import SirenSystem from "@/components/sos/SirenSystem";
 import {
   BarChart3,
   Wallet,
@@ -17,7 +20,8 @@ import {
   History,
   LogOut,
   Globe,
-  ChevronDown
+  ChevronDown,
+  Clock
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -25,25 +29,42 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { countryCode, setCountryCode } = useCountryStore();
+  const { countryCode, setCountry, currentCountry } = useCountryStore();
+  const { user } = useAuthStore();
+  const [countries, setCountries] = useState<Country[]>([]);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+        try {
+            const data = await fetchCountries();
+            setCountries(data);
+            const active = data.find((c: Country) => c.code === countryCode);
+            if (active) setCountry(active);
+        } catch (e) {
+            console.error('Failed to load countries');
+        }
+    };
+    loadCountries();
+  }, []);
 
   const menuItems = [
     { name: "Analytics", href: "/analytics", icon: <BarChart3 size={18} /> },
     { name: "Finance", href: "/finance", icon: <Wallet size={18} /> },
-    { name: "Pricing & Rules", href: "/pricing", icon: <Settings size={18} /> },
+    { name: "Workspace Settings", href: "/settings", icon: <Settings size={18} /> },
     { name: "Service Catalog", href: "/services", icon: <ClipboardList size={18} /> },
     { name: "Providers", href: "/providers", icon: <UserRound size={18} /> },
     { name: "Users", href: "/users", icon: <UserRound size={18} /> },
     { name: "Verifications", href: "/verification", icon: <ShieldCheck size={18} /> },
-    { name: "Disputes", href: "/disputes", icon: <MessageSquareWarning size={18} /> },
-    { name: "SOS Hub", href: "/sos", icon: <BellRing size={18} /> },
+    { name: "Support & SOS", href: "/sos", icon: <MessageSquareWarning size={18} /> },
     { name: "Zones", href: "/zones", icon: <MapIcon size={18} /> },
     { name: "Fraud Monitoring", href: "/fraud", icon: <ShieldAlert size={18} /> },
-    { name: "Audit Logs", href: "/audit", icon: <History size={18} /> },
+    { name: "System Management", href: "/sys-management", icon: <Settings size={18} /> },
+    { name: "Audit Ledger", href: "/audit", icon: <History size={18} /> },
   ];
 
   return (
     <div className="flex h-screen bg-neutral-50 text-neutral-950 font-sans selection:bg-brand-customer-red/10">
+      <SirenSystem />
       {/* Sidebar */}
       <aside className="w-64 bg-[#0A0A0A] text-white flex flex-col shadow-2xl relative z-40">
         <div className="p-8 border-b border-white/5">
@@ -90,22 +111,50 @@ export default function DashboardLayout({
                     <div className="relative">
                         <select
                             value={countryCode}
-                            onChange={(e) => setCountryCode(e.target.value)}
+                            onChange={(e) => {
+                                const code = e.target.value;
+                                if (code === 'GLOBAL') {
+                                    setCountry('GLOBAL');
+                                } else {
+                                    const match = countries.find(c => c.code === code);
+                                    if (match) setCountry(match);
+                                }
+                            }}
                             className="bg-neutral-50 border border-neutral-200 rounded-2xl pl-4 pr-10 py-2.5 text-xs font-black uppercase tracking-widest outline-none focus:border-brand-customer-red transition-all appearance-none shadow-sm min-w-[220px]"
                         >
-                            <option value="ZA">🇿🇦 South Africa (ZA)</option>
-                            <option value="NA">🇳🇦 Namibia (NA)</option>
-                            <option value="BW">🇧🇼 Botswana (BW)</option>
-                            <option value="ZW">🇿🇼 Zimbabwe (ZW)</option>
+                            {countries.map(c => (
+                                <option key={c.code} value={c.code}>{c.flagEmoji} {c.name} ({c.code})</option>
+                            ))}
                             <option value="GLOBAL">🌐 Global Overview</option>
                         </select>
                         <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400" />
                     </div>
                 </div>
 
+                {/* Workspace Metadata */}
+                {countryCode !== 'GLOBAL' && currentCountry && (
+                    <div className="flex gap-4 border-l pl-6 border-neutral-100">
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Currency</span>
+                            <span className="text-[10px] font-bold text-neutral-800 uppercase">{currentCountry.currency}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Timezone</span>
+                            <div className="flex items-center gap-1">
+                                <Clock size={10} className="text-neutral-400" />
+                                <span className="text-[10px] font-bold text-neutral-800 uppercase">{currentCountry.timezone.split('/')[1] || currentCountry.timezone}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col">
                      <label className="text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Cross-Country Aggregator</label>
-                     <button onClick={() => setCountryCode('GLOBAL')} className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg group ${countryCode === 'GLOBAL' ? 'bg-brand-customer-red text-white' : 'bg-neutral-900 text-white hover:bg-black'}`}>
+                     <button
+                        disabled={user?.role !== 'SUPER_ADMIN'}
+                        onClick={() => setCountry('GLOBAL')}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg group ${countryCode === 'GLOBAL' ? 'bg-brand-customer-red text-white' : 'bg-neutral-900 text-white hover:bg-black'} disabled:opacity-30 disabled:grayscale`}
+                     >
                         <Globe size={14} className="group-hover:text-white transition-colors" />
                         Global Overview
                      </button>

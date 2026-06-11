@@ -6,120 +6,240 @@ import { useCountryStore } from '@/lib/store/countryStore';
 import {
   ShieldAlert,
   Zap,
-  Eye,
   MapPin,
   Smartphone,
   MessageSquareWarning,
+  RefreshCcw,
+  CheckCircle2,
+  XCircle,
   AlertTriangle,
-  RefreshCcw
+  History,
+  TrendingUp,
+  Download,
+  Filter,
+  Eye,
+  Activity,
+  Gavel
 } from 'lucide-react';
 
-export default function FraudIntelligence() {
-  const [activeTab, setActiveTab] = useState("telemetry");
+export default function FraudMonitoring() {
+  const { countryCode } = useCountryStore();
+  const [activeTab, setActiveTab] = useState("queue");
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+
+  const loadAlerts = async () => {
+    setLoading(true);
+    try {
+        const res = await api.get(`/api/admin/fraud/alerts?countryCode=${countryCode}`);
+        setAlerts(res.data.alerts || []);
+
+        const analyticsRes = await api.get(`/api/admin/fraud/analytics?countryCode=${countryCode}`);
+        setStats(analyticsRes.data.analytics);
+    } catch (e) {
+        console.error('Failed to load fraud alerts');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (countryCode) loadAlerts();
+  }, [countryCode]);
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">FraudSense Intelligence</h1>
-          <p className="text-neutral-500 font-medium">Autonomous anti-fraud telemetry and behavior screening.</p>
+          <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">Fraud & Integrity Hub</h1>
+          <p className="text-neutral-500 font-medium text-sm">Monitor platform abuse, GPS violations, and suspicious completion patterns.</p>
         </div>
-        <div className="flex bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-            <TabButton active={activeTab === "telemetry"} onClick={() => setActiveTab("telemetry")} label="AI Telemetry" />
-            <TabButton active={activeTab === "integrity"} onClick={() => setActiveTab("integrity")} label="Integrity" />
+        <div className="flex flex-wrap bg-neutral-100 p-1 rounded-2xl border border-neutral-200 shadow-inner">
+            <TabButton active={activeTab === "queue"} onClick={() => setActiveTab("queue")} label="Fake Completion" />
+            <TabButton active={activeTab === "feed"} onClick={() => setActiveTab("feed")} label="FraudSense Feed" />
+            <TabButton active={activeTab === "quali"} onClick={() => setActiveTab("quali")} label="QualiCheck NLP" />
+            <TabButton active={activeTab === "gps"} onClick={() => setActiveTab("gps")} label="GPS Integrity" />
+            <TabButton active={activeTab === "device"} onClick={() => setActiveTab("device")} label="Device Health" />
         </div>
       </div>
 
-      {activeTab === "telemetry" && <FraudTelemetry />}
-      {activeTab === "integrity" && <IntegrityTracker />}
+      {/* KPI GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard label="Critical Alerts" value={stats?.criticalAlerts || 0} icon={<AlertTriangle className="text-red-600" />} color="border-red-100" />
+          <StatCard label="Escrow On Hold" value={alerts.filter(a => a.riskType === 'FAKE_COMPLETION' && a.status === 'PENDING').length} icon={<Activity className="text-orange-600" />} color="border-orange-100" />
+          <StatCard label="Confirmed Fraud" value={alerts.filter(a => a.status === 'APPROVED').length} icon={<Gavel className="text-neutral-900" />} color="border-neutral-200" />
+          <StatCard label="Total Audit Events" value={stats?.totalAlerts || 0} icon={<History className="text-green-600" />} color="border-green-100" />
+      </div>
+
+      {activeTab === "queue" && <FakeCompletionQueue alerts={alerts.filter(a => a.riskType === 'FAKE_COMPLETION')} onRefresh={loadAlerts} />}
+      {activeTab === "feed" && <FraudSenseFeed alerts={alerts} />}
+      {activeTab === "quali" && <GenericFraudList alerts={alerts.filter(a => a.riskType.startsWith('QUALICHECK'))} title="QualiCheck NLP Violations" />}
+      {activeTab === "gps" && <GenericFraudList alerts={alerts.filter(a => ['GPS_INTEGRITY', 'MOCK_GPS', 'IMPOSSIBLE_MOVEMENT'].includes(a.riskType))} title="GPS Integrity Monitor" />}
+      {activeTab === "device" && <GenericFraudList alerts={alerts.filter(a => a.riskType === 'MULTI_ACCOUNT' || a.riskType === 'REFERRAL_ABUSE')} title="Device & Identity Health" />}
     </div>
   );
 }
 
-function FraudTelemetry() {
-    const { countryCode } = useCountryStore();
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+function GenericFraudList({ alerts, title }: { alerts: any[], title: string }) {
+    return (
+        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+            <div className="p-8 border-b bg-neutral-50/50">
+                <h3 className="font-black text-lg uppercase tracking-tight">{title}</h3>
+            </div>
+            <div className="divide-y divide-neutral-50 font-bold">
+                {alerts.length === 0 ? (
+                    <div className="p-20 text-center text-neutral-300 uppercase text-xs">No incidents detected in this category.</div>
+                ) : alerts.map(a => (
+                    <div key={a._id} className="p-6 flex justify-between items-center hover:bg-neutral-50/50 transition-all group">
+                         <div className="flex gap-6 items-center">
+                            <div className={`p-4 rounded-2xl ${a.severity === 'CRITICAL' ? 'bg-red-600' : 'bg-neutral-100'} ${a.severity === 'CRITICAL' ? 'text-white' : 'text-neutral-400'}`}>
+                                {a.riskType.includes('GPS') ? <MapPin size={20} /> : a.riskType.includes('QUALI') ? <MessageSquareWarning size={20} /> : <Smartphone size={20} />}
+                            </div>
+                            <div>
+                                <p className="text-sm font-black uppercase text-neutral-900">{a.riskType.replace(/_/g, ' ')}</p>
+                                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-1">Ref: {a.fraudEventId} • Score: {a.riskScore}</p>
+                                {a.riskType === 'IMPOSSIBLE_MOVEMENT' && <span className="text-[8px] font-black text-red-600 border border-red-100 px-2 py-0.5 rounded-full mt-1 inline-block uppercase tracking-tighter">Automatic Shadow Ban: 1h</span>}
+                            </div>
+                        </div>
+                        <div className="text-right flex items-center gap-6">
+                            <div>
+                                <p className="text-xs text-neutral-900">{new Date(a.createdAt).toLocaleDateString()}</p>
+                                <p className="text-[10px] text-neutral-400 uppercase">{new Date(a.createdAt).toLocaleTimeString()}</p>
+                            </div>
+                            <button className="p-2 bg-neutral-900 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all">
+                                <Eye size={16} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
 
-    const loadAlerts = async () => {
-        setLoading(true);
+function FakeCompletionQueue({ alerts, onRefresh }: { alerts: any[], onRefresh: () => void }) {
+    const handleResolve = async (id: string, status: string) => {
         try {
-            const res = await api.get(`/api/v1/admin/fraud/alerts?countryCode=${countryCode}`);
-            setAlerts(res.data.alerts || []);
+            await api.patch(`/api/admin/fraud/alerts/${id}/resolve`, { status });
+            onRefresh();
         } catch (e) {
-            console.error('Failed to load fraud alerts');
-        } finally {
-            setLoading(false);
+            alert('Failed to resolve alert');
         }
     };
 
-    useEffect(() => {
-        if (countryCode) loadAlerts();
-    }, [countryCode]);
-
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-3 space-y-6">
-                <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
-                    <div className="p-8 border-b flex justify-between items-center bg-red-50/30">
-                        <div>
-                            <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight flex items-center gap-2">
-                                <AlertTriangle size={18} className="text-red-600" />
-                                High Risk Review Queue
-                            </h3>
-                            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Escrow Release Monitoring (Section 327)</p>
-                        </div>
-                        <button onClick={loadAlerts} className="p-2 bg-white border rounded-xl hover:bg-red-50 transition-all"><RefreshCcw size={16} /></button>
-                    </div>
-                    <div className="divide-y divide-neutral-50">
-                        {loading ? (
-                            <div className="p-10 text-center text-xs font-bold text-neutral-300 uppercase tracking-widest">Scanning logs...</div>
-                        ) : alerts.length === 0 ? (
-                            <div className="p-10 text-center text-neutral-400">No high-risk activity detected in {countryCode}.</div>
-                        ) : (
-                            alerts.map((alert, i) => (
-                                <div key={i} className="p-6 flex justify-between items-center hover:bg-neutral-50/50 transition-all group">
-                                    <div className="flex gap-6 items-start">
-                                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-neutral-100 text-red-600 group-hover:scale-110 transition-all shrink-0">
-                                            <ShieldAlert size={20} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-black text-xs uppercase tracking-widest text-neutral-400">SUSPICIOUS_CANCELLATION</p>
-                                                <span className="w-1 h-1 bg-neutral-300 rounded-full"></span>
-                                                <p className="text-[10px] font-bold text-neutral-300 uppercase">{new Date(alert.createdAt).toLocaleTimeString()}</p>
-                                            </div>
-                                            <p className="font-black text-neutral-800 tracking-tight">Job ID: {alert._id.slice(-6)}</p>
-                                            <p className="text-xs text-neutral-400 font-medium mt-1">Customer: {alert.customerId?.firstName || 'Unknown'}</p>
-                                        </div>
+        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+            <div className="p-8 border-b bg-neutral-50/50 flex justify-between items-center">
+                <div>
+                    <h3 className="font-black text-lg uppercase tracking-tight">Suspicious Completion Queue</h3>
+                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Jobs completed under 50% of historical average</p>
+                </div>
+                <button onClick={onRefresh} className="p-2 hover:bg-white rounded-xl transition-all"><RefreshCcw size={16} /></button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                        <tr>
+                            <th className="px-8 py-4">Incident / Job</th>
+                            <th className="px-8 py-4">Provider</th>
+                            <th className="px-8 py-4 text-center">Duration (Act/Exp)</th>
+                            <th className="px-8 py-4">Status</th>
+                            <th className="px-8 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-50 text-sm font-bold">
+                        {alerts.length === 0 ? (
+                            <tr><td colSpan={5} className="py-20 text-center text-neutral-300 uppercase text-xs">No pending completions to audit.</td></tr>
+                        ) : alerts.map(a => (
+                            <tr key={a._id} className="hover:bg-neutral-50/50 transition-all">
+                                <td className="px-8 py-5">
+                                    <p className="text-neutral-900">{a.fraudEventId}</p>
+                                    <p className="text-[10px] text-neutral-400 font-medium">Job: {a.jobId?._id?.slice(-6)}</p>
+                                </td>
+                                <td className="px-8 py-5 text-neutral-600">
+                                    {a.providerId?.userId?.firstName} {a.providerId?.userId?.lastName}
+                                </td>
+                                <td className="px-8 py-5 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-red-600">{Math.round(a.evidence?.actualDurationMin)}m</span>
+                                        <span className="text-[10px] text-neutral-400">vs {Math.round(a.evidence?.expectedDurationMin)}m</span>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button className="bg-neutral-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all">Audit</button>
+                                </td>
+                                <td className="px-8 py-5">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase ${a.status === 'PENDING' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>{a.status}</span>
+                                </td>
+                                <td className="px-8 py-5 text-right space-x-2">
+                                    {a.status === 'PENDING' && (
+                                        <>
+                                            <button onClick={() => handleResolve(a._id, 'REJECTED')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] uppercase font-black hover:bg-green-700 transition-all shadow-lg shadow-green-600/20">Release Escrow</button>
+                                            <button onClick={() => handleResolve(a._id, 'APPROVED')} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] uppercase font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20">Confirm Fraud</button>
+                                        </>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+function FraudSenseFeed({ alerts }: { alerts: any[] }) {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 bg-[#0A0A0A] rounded-[40px] p-10 text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_#410200_0%,_transparent_60%)]"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-10">
+                        <h3 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
+                            <Zap className="text-brand-customer-red" />
+                            Live FraudSense™ Stream
+                        </h3>
+                        <div className="flex gap-2">
+                            <button className="p-2 hover:bg-white/10 rounded-xl transition-all"><Filter size={16} /></button>
+                            <button className="p-2 hover:bg-white/10 rounded-xl transition-all"><Download size={16} /></button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        {alerts.map(a => (
+                            <div key={a._id} className="bg-white/5 border border-white/10 p-6 rounded-[32px] hover:bg-white/10 transition-all flex items-center justify-between group">
+                                <div className="flex gap-6 items-center">
+                                    <div className={`p-4 rounded-2xl ${a.severity === 'CRITICAL' ? 'bg-red-600' : 'bg-neutral-800'} text-white`}>
+                                        <ShieldAlert size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black uppercase tracking-widest text-neutral-300">{a.riskType.replace(/_/g, ' ')}</p>
+                                        <p className="text-[10px] text-neutral-500 font-bold uppercase mt-1">
+                                            {a.providerId ? `Provider: ${a.providerId.userId?.firstName} ${a.providerId.userId?.lastName}` : `User: ${a.userId?.firstName} ${a.userId?.lastName}`}
+                                        </p>
+                                        <p className="text-[10px] text-neutral-600 italic">"{a.evidence?.reason || a.evidence?.text || 'Telemetry violation'}"</p>
                                     </div>
                                 </div>
-                            ))
-                        )}
+                                <div className="text-right">
+                                    <p className="text-xs font-black text-white mb-1">{new Date(a.createdAt).toLocaleTimeString()}</p>
+                                    <button className="opacity-0 group-hover:opacity-100 transition-all text-[10px] font-black uppercase text-brand-customer-red flex items-center gap-1 ml-auto">
+                                        Audit Case <Eye size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
+            </div>
 
-                <div className="bg-[#0A0A0A] rounded-[40px] p-12 text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_#410200_0%,_transparent_60%)]"></div>
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-4 mb-10">
-                             <div className="p-4 bg-brand-customer-red rounded-[24px] text-white">
-                                <Zap size={24} />
-                             </div>
-                             <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">FraudSense Pulse</h3>
-                                <p className="text-neutral-500 font-bold uppercase tracking-[0.2em] text-[9px] mt-2">Workspace Behavior Performance</p>
-                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            <TelemetryCard label="Flagged" value={alerts.length.toString()} sub="Events" color="text-red-500" />
-                            <TelemetryCard label="Bans" value="0" sub="Active" color="text-yellow-500" />
-                            <TelemetryCard label="Isolation" value="Verified" sub={countryCode} color="text-green-500" />
-                            <TelemetryCard label="Engine" value="Production" sub="V3.1" color="text-blue-500" />
-                        </div>
+            <div className="lg:col-span-4 space-y-6">
+                <div className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm">
+                    <h4 className="font-black text-xs uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
+                        <TrendingUp size={14} /> Risk Distribution
+                    </h4>
+                    <div className="space-y-6">
+                        <RiskBar label="Acceptance Integrity" score={92} />
+                        <RiskBar label="GPS Fidelity" score={78} />
+                        <RiskBar label="Financial Honesty" score={95} />
+                        <RiskBar label="Referral Purity" score={64} />
                     </div>
                 </div>
             </div>
@@ -127,28 +247,16 @@ function FraudTelemetry() {
     )
 }
 
-function IntegrityTracker() {
+function RiskBar({ label, score }: { label: string, score: number }) {
     return (
-        <div className="bg-white border border-neutral-200 rounded-[40px] p-12 shadow-sm flex flex-col items-center justify-center h-[600px] relative overflow-hidden">
-            <div className="absolute inset-0 bg-neutral-50 opacity-20"></div>
-            <div className="relative z-10 text-center max-w-lg">
-                <Smartphone size={48} className="mx-auto text-neutral-200 mb-6" />
-                <h3 className="text-2xl font-black uppercase text-neutral-800 mb-4">Device Binding Matrix</h3>
-                <p className="text-neutral-400 font-medium mb-12">Tracking hardware IDs to enforce strict 1:1 account integrity.</p>
-                <div className="bg-neutral-100 border-2 border-dashed border-neutral-200 rounded-3xl p-12">
-                    <p className="text-xs font-black uppercase text-neutral-400">Production Device IDs Syncing...</p>
-                </div>
+        <div className="space-y-2">
+            <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                <span className="text-neutral-400">{label}</span>
+                <span className={score > 80 ? 'text-green-600' : score > 50 ? 'text-orange-600' : 'text-red-600'}>{score}%</span>
             </div>
-        </div>
-    )
-}
-
-function TelemetryCard({ label, value, sub, color }: { label: string, value: string, sub: string, color: string }) {
-    return (
-        <div>
-            <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">{label}</p>
-            <p className={`text-3xl font-black ${color}`}>{value}</p>
-            <p className="text-[9px] font-bold text-neutral-500 uppercase mt-1">{sub}</p>
+            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div className={`h-full ${score > 80 ? 'bg-green-500' : score > 50 ? 'bg-orange-500' : 'bg-red-500'}`} style={{ width: `${score}%` }}></div>
+            </div>
         </div>
     )
 }
@@ -157,11 +265,24 @@ function TabButton({ active, onClick, label }: { active: boolean, onClick: () =>
     return (
         <button
             onClick={onClick}
-            className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase transition-all tracking-widest ${
-                active ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-400 hover:text-neutral-700'
+            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all tracking-widest ${
+                active ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}
         >
             {label}
         </button>
+    )
+}
+
+function StatCard({ label, value, icon, color }: any) {
+    return (
+        <div className={`bg-white p-6 rounded-[24px] border ${color} shadow-sm`}>
+            <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-neutral-50 rounded-xl">{icon}</div>
+                <div className="text-[9px] font-black text-neutral-400 border border-neutral-100 px-2 py-0.5 rounded-full uppercase tracking-widest">Global</div>
+            </div>
+            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-3xl font-black text-neutral-900">{value}</p>
+        </div>
     )
 }

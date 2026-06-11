@@ -9,6 +9,21 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Inject countryCode from persisted store
+  const stored = localStorage.getItem('piecejob-workspace');
+  if (stored) {
+      try {
+          const parsed = JSON.parse(stored);
+          const countryCode = parsed.state?.countryCode;
+          if (countryCode) {
+              config.headers['x-country-code'] = countryCode;
+          }
+      } catch (e) {
+          console.error('Failed to parse workspace storage');
+      }
+  }
+
   return config;
 });
 

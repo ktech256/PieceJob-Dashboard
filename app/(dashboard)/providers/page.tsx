@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api/axios';
-import { useCountryStore } from '@/lib/store/countryStore';
+import api from '../../../lib/api/axios';
+import { useCountryStore } from '../../../lib/store/countryStore';
 import {
   Activity,
   Heart,
