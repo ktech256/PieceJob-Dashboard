@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Smartphone,
   Calendar,
-  FileText
+  FileText,
+  Eye
 } from 'lucide-react';
 
 export default function ReviewVerification() {
