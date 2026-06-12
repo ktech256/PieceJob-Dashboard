@@ -94,32 +94,32 @@ export default function AnalyticsDashboard() {
         <StatCard
           title="Gross Revenue"
           value={formatCurrency(stats.financials?.grossRevenue || 0, stats.currency)}
-          trend={`${stats.growth?.userGrowth?.percentage.toFixed(1)}%`}
-          isPositive={stats.growth?.userGrowth?.percentage >= 0}
+          trend={`${stats.growth?.revenueGrowth?.percentage.toFixed(1)}%`}
+          isPositive={stats.growth?.revenueGrowth?.percentage >= 0}
           icon={<Zap size={20} className="text-brand-customer-red" />}
           color="bg-brand-customer-red/5"
         />
         <StatCard
           title="Online Providers"
-          value={stats.operations?.providers?.onlineProviders.toString()}
-          trend="+2.1%"
-          isPositive={true}
+          value={stats.operations?.providers?.onlineProviders?.toString() || "0"}
+          trend={`${stats.growth?.providerGrowth?.percentage.toFixed(1)}%`}
+          isPositive={stats.growth?.providerGrowth?.percentage >= 0}
           icon={<Users size={20} className="text-brand-provider-green" />}
           color="bg-brand-provider-green/5"
         />
         <StatCard
           title="Efficiency Score"
           value={`${stats.efficiency?.avgCompletionMinutes || 0}m`}
-          trend="-4.5%"
+          trend={`${stats.efficiency?.wavePerformance?.completionRate.toFixed(1)}%`}
           isPositive={true}
           icon={<Activity size={20} className="text-blue-600" />}
           color="bg-blue-50"
         />
         <StatCard
-          title="Total Jobs"
-          value={stats.business?.jobs?.totalJobs.toString()}
-          trend="+12%"
-          isPositive={true}
+          title="Active Jobs"
+          value={stats.business?.jobs?.activeJobs?.toString() || "0"}
+          trend={`${stats.growth?.jobGrowth?.percentage.toFixed(1)}%`}
+          isPositive={stats.growth?.jobGrowth?.percentage >= 0}
           icon={<Briefcase size={20} className="text-orange-600" />}
           color="bg-orange-50"
         />
@@ -174,7 +174,7 @@ export default function AnalyticsDashboard() {
         <div className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm flex flex-col justify-between">
             <div>
                 <h3 className="text-sm font-black text-neutral-400 uppercase tracking-widest mb-8 border-l-4 border-neutral-900 pl-4">Efficiency Matrix</h3>
-                <div className="space-y-10">
+                <div className="space-y-6">
                     <EfficiencyItem
                         icon={<Clock size={16} />}
                         label="Avg. Acceptance"
@@ -193,11 +193,19 @@ export default function AnalyticsDashboard() {
                     />
                     <EfficiencyItem
                         icon={<Zap size={16} />}
-                        label="Success Rate"
+                        label="Broadcast Success"
                         value={`${Math.round(stats.efficiency?.wavePerformance?.broadcastSuccessRate || 0)}%`}
-                        subValue="Broadcast Success"
+                        subValue="Success Rate"
                         percent={Math.round(stats.efficiency?.wavePerformance?.broadcastSuccessRate || 0)}
                         color="bg-orange-500"
+                    />
+                    <EfficiencyItem
+                        icon={<Briefcase size={16} />}
+                        label="Completion Rate"
+                        value={`${Math.round(stats.efficiency?.wavePerformance?.completionRate || 0)}%`}
+                        subValue="Accepted -> Completed"
+                        percent={Math.round(stats.efficiency?.wavePerformance?.completionRate || 0)}
+                        color="bg-purple-500"
                     />
                 </div>
             </div>

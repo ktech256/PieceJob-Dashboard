@@ -27,6 +27,7 @@ export default function ServiceDemandHeatmap() {
   const { countryCode } = useCountryStore();
   const [loading, setLoading] = useState(true);
   const [densityData, setDensityData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -38,6 +39,7 @@ export default function ServiceDemandHeatmap() {
     try {
         const res = await api.get(`/api/admin/analytics/heatmap?countryCode=${countryCode}`);
         setDensityData(res.data.density);
+        setStats(res.data.stats);
     } catch (e) {
         console.error('Heatmap load failed');
     } finally {
@@ -78,10 +80,10 @@ export default function ServiceDemandHeatmap() {
                     <div className="space-y-4">
                          <div className="flex justify-between items-center">
                             <span className="text-xs font-bold text-neutral-500">Active Clusters</span>
-                            <span className="text-xs font-black text-red-600">{densityData.length} Points</span>
+                            <span className="text-xs font-black text-red-600">{stats?.totalPoints || 0} Points</span>
                          </div>
                          <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                            <div className="w-[85%] h-full bg-red-600"></div>
+                            <div className="h-full bg-red-600" style={{ width: `${Math.min(100, (stats?.totalPoints || 0) * 10)}%` }}></div>
                          </div>
                     </div>
                 </div>
@@ -91,7 +93,7 @@ export default function ServiceDemandHeatmap() {
                         <TrendingUp size={16} />
                         <span className="text-xs font-black uppercase tracking-tight">Growth Trend</span>
                     </div>
-                    <p className="text-2xl font-black text-neutral-900">+12.4%</p>
+                    <p className="text-2xl font-black text-neutral-900">{stats?.growthTrend > 0 ? '+' : ''}{stats?.growthTrend || 0}%</p>
                     <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Request volume vs last week</p>
                 </div>
             </div>
@@ -99,7 +101,7 @@ export default function ServiceDemandHeatmap() {
             <div className="bg-[#0A0A0A] rounded-2xl p-6 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-20"><Zap size={40} /></div>
                 <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Surge Recommendation</p>
-                <p className="text-lg font-black">1.2x Multiplier</p>
+                <p className="text-lg font-black">{stats?.surgeRecommendation || 1.0}x Multiplier</p>
                 <button className="w-full mt-4 bg-white text-black py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-all">Apply to Zone</button>
             </div>
         </div>
