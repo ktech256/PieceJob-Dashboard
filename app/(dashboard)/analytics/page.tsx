@@ -111,7 +111,7 @@ export default function AnalyticsDashboard() {
           title="Efficiency Score"
           value={`${stats.efficiency?.avgCompletionMinutes || 0}m`}
           trend={`${stats.efficiency?.wavePerformance?.completionRate.toFixed(1)}%`}
-          isPositive={true}
+          isPositive={stats.efficiency?.wavePerformance?.completionRate >= 70}
           icon={<Activity size={20} className="text-blue-600" />}
           color="bg-blue-50"
         />
