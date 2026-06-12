@@ -7,6 +7,7 @@ import { fetchCountries } from "@/lib/api/countries";
 import api from "@/lib/api/axios";
 import { useEffect, useState } from "react";
 import SirenSystem from "@/components/sos/SirenSystem";
+import { useRouter } from "next/navigation";
 import {
   BarChart3,
   Wallet,
@@ -31,7 +32,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { countryCode, setCountry, currentCountry } = useCountryStore();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
   const [countries, setCountries] = useState<Country[]>([]);
 
   useEffect(() => {
@@ -79,6 +81,11 @@ export default function DashboardLayout({
     return () => clearInterval(interval);
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   return (
     <div className="flex h-screen bg-neutral-50 text-neutral-950 font-sans selection:bg-brand-customer-red/10">
       <SirenSystem />
@@ -112,7 +119,10 @@ export default function DashboardLayout({
         </nav>
 
         <div className="p-4 border-t border-white/5 bg-neutral-950/50">
-          <button className="flex items-center gap-3 w-full px-4 py-4 text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-2xl transition-all">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-4 text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+          >
             <LogOut size={16} />
             Termination
           </button>
