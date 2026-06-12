@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCountryStore, Country } from "@/lib/store/countryStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { fetchCountries } from "@/lib/api/countries";
+import api from "@/lib/api/axios";
 import { useEffect, useState } from "react";
 import SirenSystem from "@/components/sos/SirenSystem";
 import {
