@@ -37,6 +37,11 @@ export default function DashboardLayout({
   const [countries, setCountries] = useState<Country[]>([]);
 
   useEffect(() => {
+    if (!user && !localStorage.getItem('token')) {
+        router.push('/login');
+        return;
+    }
+
     const loadCountries = async () => {
         try {
             const data = await fetchCountries();
