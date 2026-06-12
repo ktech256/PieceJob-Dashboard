@@ -46,11 +46,12 @@ function CustomerDirectory() {
     const { countryCode } = useCountryStore();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showTestUsers, setShowTestUsers] = useState(false);
 
     const loadUsers = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/users?countryCode=${countryCode}`);
+            const res = await api.get(`/api/admin/users?countryCode=${countryCode}&isTestUser=${showTestUsers}`);
             setUsers(res.data.users || []);
         } catch (e) {
             console.error('Failed to load users');
@@ -61,7 +62,7 @@ function CustomerDirectory() {
 
     useEffect(() => {
         if (countryCode) loadUsers();
-    }, [countryCode]);
+    }, [countryCode, showTestUsers]);
 
     return (
         <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
@@ -75,7 +76,18 @@ function CustomerDirectory() {
                         <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Workspace-Isolated Records (Section 169)</p>
                     </div>
                 </div>
-                <button onClick={loadUsers} className="p-2 bg-white border rounded-xl hover:bg-neutral-50 transition-all"><RefreshCcw size={16} /></button>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-white border px-4 py-2 rounded-xl">
+                        <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Test Mode</span>
+                        <input
+                            type="checkbox"
+                            checked={showTestUsers}
+                            onChange={(e) => setShowTestUsers(e.target.checked)}
+                            className="w-4 h-4 rounded border-neutral-300 text-brand-customer-red focus:ring-brand-customer-red"
+                        />
+                    </div>
+                    <button onClick={loadUsers} className="p-2 bg-white border rounded-xl hover:bg-neutral-50 transition-all"><RefreshCcw size={16} /></button>
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -95,7 +107,10 @@ function CustomerDirectory() {
                             users.map((u) => (
                                 <tr key={u._id} className="hover:bg-neutral-50/50 transition-all group">
                                     <td className="px-8 py-5">
-                                        <p className="text-neutral-800 group-hover:text-brand-customer-red transition-all">{u.firstName} {u.lastName}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-neutral-800 group-hover:text-brand-customer-red transition-all">{u.firstName} {u.lastName}</p>
+                                            {u.isTestUser && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">Test Account</span>}
+                                        </div>
                                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{u._id}</p>
                                     </td>
                                     <td className="px-8 py-5 text-xs text-neutral-500 uppercase tracking-widest font-black">{u.countryCode}</td>
