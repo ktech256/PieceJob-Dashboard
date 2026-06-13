@@ -18,9 +18,11 @@ import {
   Activity
 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function VerificationQueue() {
   const { countryCode } = useCountryStore();
+  const pathname = usePathname();
   const [queue, setQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("PENDING");
@@ -48,7 +50,17 @@ export default function VerificationQueue() {
           <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">Verification Command</h1>
           <p className="text-neutral-500 font-medium text-sm">Review government IDs, licenses, and professional vetting requests.</p>
         </div>
-        <div className="flex bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
+        <div className="flex gap-4">
+            <Link href="/verification/addresses">
+                <button className="px-6 py-2.5 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase hover:scale-105 transition-all shadow-lg">Address Queue</button>
+            </Link>
+            <Link href="/verification/banking">
+                <button className="px-6 py-2.5 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase hover:scale-105 transition-all shadow-lg">Banking Queue</button>
+            </Link>
+        </div>
+      </div>
+
+      <div className="flex bg-neutral-100 p-1 rounded-2xl border border-neutral-200 w-fit">
             {['PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'].map(status => (
                 <button
                     key={status}
@@ -61,7 +73,6 @@ export default function VerificationQueue() {
                 </button>
             ))}
         </div>
-      </div>
 
       <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
