@@ -76,9 +76,102 @@ export default function FraudMonitoring() {
       {activeTab === "feed" && <FraudSenseFeed alerts={alerts} />}
       {activeTab === "quali" && <GenericFraudList alerts={alerts.filter(a => a.riskType.startsWith('QUALICHECK'))} title="QualiCheck NLP Violations" />}
       {activeTab === "gps" && <GenericFraudList alerts={alerts.filter(a => ['GPS_INTEGRITY', 'MOCK_GPS', 'IMPOSSIBLE_MOVEMENT'].includes(a.riskType))} title="GPS Integrity Monitor" />}
-      {activeTab === "device" && <GenericFraudList alerts={alerts.filter(a => a.riskType === 'MULTI_ACCOUNT' || a.riskType === 'REFERRAL_ABUSE')} title="Device & Identity Health" />}
+      {activeTab === "device" && <DeviceSecuritySettings />}
     </div>
   );
+}
+
+function DeviceSecuritySettings() {
+    const { countryCode } = useCountryStore();
+    const [settings, setSettings] = useState<any>(null);
+    const [updating, setUpdating] = useState(false);
+
+    const loadSettings = async () => {
+        try {
+            const res = await api.get('/api/admin/settings');
+            setSettings(res.data.settings);
+        } catch (e) {
+            console.error('Failed to load settings');
+        }
+    };
+
+    const toggleDeviceLock = async () => {
+        setUpdating(true);
+        try {
+            const newVal = !settings.deviceLockEnabled;
+            await api.post('/api/admin/settings', { deviceLockEnabled: newVal });
+            setSettings({ ...settings, deviceLockEnabled: newVal });
+        } catch (e) {
+            alert('Failed to update security settings');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSettings();
+    }, [countryCode]);
+
+    return (
+        <div className="space-y-8">
+            <div className="bg-white border border-neutral-200 rounded-[32px] p-10 shadow-sm">
+                <div className="flex justify-between items-start mb-12">
+                    <div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-neutral-800">Device Security Engine</h3>
+                        <p className="text-neutral-400 font-bold uppercase tracking-widest text-xs mt-1">Hardware Binding & Multi-Account Prevention (Section 15.1)</p>
+                    </div>
+                    <div className={`p-4 rounded-2xl ${settings?.deviceLockEnabled ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'} font-black text-[10px] uppercase tracking-widest border border-current/10`}>
+                        Status: {settings?.deviceLockEnabled ? 'Enforced' : 'Disabled'}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between p-6 bg-neutral-50 rounded-[24px] border border-neutral-100">
+                            <div className="flex gap-4 items-center">
+                                <div className="p-3 bg-white rounded-xl shadow-sm"><Smartphone size={20} className="text-neutral-400" /></div>
+                                <div>
+                                    <p className="text-sm font-black text-neutral-800 uppercase tracking-tight">One-Device-Per-Account</p>
+                                    <p className="text-[10px] text-neutral-400 font-bold uppercase mt-0.5">Strict Hardware Binding</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={toggleDeviceLock}
+                                disabled={updating}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${settings?.deviceLockEnabled ? 'bg-brand-customer-red' : 'bg-neutral-200'}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings?.deviceLockEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                        <p className="text-xs text-neutral-400 font-medium leading-relaxed px-2">
+                            When enabled, the platform automatically logs the Hardware ID and prevents providers from registering multiple accounts on the same physical phone.
+                            <br/><br/>
+                            <span className="text-amber-600 font-bold uppercase tracking-tighter italic">Warning: Disabling this check increases the risk of referral fraud and provider ghost accounts.</span>
+                        </p>
+                    </div>
+
+                    <div className="bg-[#0A0A0A] rounded-[32px] p-8 text-white shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10"><ShieldAlert size={120} /></div>
+                        <h4 className="font-black text-xs uppercase tracking-widest text-neutral-500 mb-6">Security Context</h4>
+                        <div className="space-y-4">
+                            <div className="flex justify-between text-[10px] font-black uppercase">
+                                <span className="text-neutral-500">Hardware ID Spoof Detection</span>
+                                <span className="text-green-500">Active</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black uppercase">
+                                <span className="text-neutral-500">Root/Jailbreak Guard</span>
+                                <span className="text-green-500">Active</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black uppercase">
+                                <span className="text-neutral-500">VPN/Proxy Shadow Ban</span>
+                                <span className="text-brand-customer-red animate-pulse">Enabled</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 function GenericFraudList({ alerts, title }: { alerts: any[], title: string }) {
