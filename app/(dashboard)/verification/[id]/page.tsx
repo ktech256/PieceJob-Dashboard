@@ -57,9 +57,27 @@ export default function ReviewVerification() {
 
       try {
           await api.patch(`/api/admin/verifications/${id}/review`, { status, rejectionReason: reason });
-          router.push('/verification');
+          loadRequest(); // Refresh instead of navigating away immediately if doing partial review
       } catch (e) {
           alert('Failed to update verification status');
+      }
+  };
+
+  const handleDocumentReview = async (docId: string, status: 'APPROVED' | 'REJECTED') => {
+      let reason = null;
+      if (status === 'REJECTED') {
+          reason = prompt('Enter rejection reason for this document:');
+          if (!reason) return;
+      }
+
+      try {
+          await api.patch(`/api/admin/verifications/${id}/review`, {
+              status: 'UNDER_REVIEW', // Keeping it in review state
+              documentStatusUpdates: [{ docId, status, reason }]
+          });
+          loadRequest();
+      } catch (e) {
+          alert('Failed to update document status');
       }
   };
 
@@ -169,6 +187,25 @@ export default function ReviewVerification() {
 
                    {/* VIEWER CONTROLS */}
                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl">
+                       {selectedDoc && selectedDoc.status !== 'APPROVED' && (
+                           <>
+                               <button
+                                onClick={() => handleDocumentReview(selectedDoc._id, 'REJECTED')}
+                                className="bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white p-2 rounded-xl transition-all"
+                                title="Reject Document"
+                               >
+                                   <XCircle size={16} />
+                               </button>
+                               <button
+                                onClick={() => handleDocumentReview(selectedDoc._id, 'APPROVED')}
+                                className="bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white p-2 rounded-xl transition-all"
+                                title="Approve Document"
+                               >
+                                   <CheckCircle2 size={16} />
+                               </button>
+                               <div className="w-px h-6 bg-white/10 mx-2"></div>
+                           </>
+                       )}
                        <ViewerBtn icon={<RotateCcw size={16} />} onClick={() => setRotation(r => r - 90)} />
                        <ViewerBtn icon={<RotateCw size={16} />} onClick={() => setRotation(r => r + 90)} />
                        <div className="w-px h-6 bg-white/10 mx-2"></div>
