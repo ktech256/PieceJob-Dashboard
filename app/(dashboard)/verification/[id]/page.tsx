@@ -103,9 +103,23 @@ export default function ReviewVerification() {
                       </div>
                   </div>
                   <div className="space-y-3 pt-6 border-t border-neutral-100">
-                      <MetricRow label="Target Level" value={request.type} color="text-brand-customer-red" />
-                      <MetricRow label="Status" value={request.status} color="text-neutral-500" />
+                      <MetricRow label="Current Level" value={request.providerId?.verificationLevel} color="text-neutral-500" />
+                      <MetricRow label="Required Level" value={request.type} color="text-brand-customer-red" />
+                      <MetricRow label="Vetting Status" value={request.status} color="text-neutral-500" />
                       <MetricRow label="Workspace" value={request.countryCode} color="text-neutral-500" />
+                  </div>
+                  <div className="space-y-1 pt-6 border-t border-neutral-100">
+                      <MetricRow label="Approved Files" value={request.documents?.filter((d: any) => d.status === 'APPROVED').length} color="text-green-500" />
+                      <MetricRow label="Pending Files" value={request.documents?.filter((d: any) => d.status === 'PENDING').length} color="text-amber-500" />
+                      <MetricRow label="Rejected Files" value={request.documents?.filter((d: any) => d.status === 'REJECTED').length} color="text-red-500" />
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-neutral-100">
+                      <h4 className="font-black text-[9px] uppercase tracking-widest text-neutral-400 mb-4">Service Context</h4>
+                      <div className="flex flex-wrap gap-1">
+                          {request.providerId?.servicesOffered?.map((s: string) => (
+                              <span key={s} className="text-[8px] bg-neutral-50 border border-neutral-100 px-1.5 py-0.5 rounded-md uppercase font-bold text-neutral-600">{s}</span>
+                          ))}
+                      </div>
                   </div>
               </div>
 
