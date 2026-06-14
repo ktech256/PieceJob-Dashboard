@@ -52,8 +52,8 @@ export default function ReviewVerification() {
   }, [id]);
 
   const handleReview = async (status: string) => {
-      const reason = status === 'REJECTED' ? prompt('Enter rejection reason:') : null;
-      if (status === 'REJECTED' && !reason) return;
+      const reason = (status === 'REJECTED' || status === 'RESUBMITTED') ? prompt(`Enter reason for ${status}:`) : null;
+      if ((status === 'REJECTED' || status === 'RESUBMITTED') && !reason) return;
 
       try {
           await api.patch(`/api/admin/verifications/${id}/review`, { status, rejectionReason: reason });
@@ -76,6 +76,9 @@ export default function ReviewVerification() {
           <div className="flex gap-2">
               <button onClick={() => handleReview('REJECTED')} className="bg-red-50 text-red-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all shadow-sm">
                   Reject Request
+              </button>
+              <button onClick={() => handleReview('RESUBMITTED')} className="bg-amber-50 text-amber-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-amber-600 hover:text-white transition-all shadow-sm">
+                  Request Resubmission
               </button>
               <button onClick={() => handleReview('APPROVED')} className="bg-green-600 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-all shadow-lg shadow-green-600/20 flex items-center gap-2">
                   <CheckCircle2 size={14} /> Approve Vetting

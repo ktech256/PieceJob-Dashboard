@@ -80,17 +80,19 @@ export default function VerificationQueue() {
                   <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                       <tr>
                           <th className="px-8 py-5">Provider</th>
+                          <th className="px-8 py-5">Workspace</th>
+                          <th className="px-8 py-5">Active Services</th>
                           <th className="px-8 py-5">Level Requested</th>
                           <th className="px-8 py-5">Submitted</th>
-                          <th className="px-8 py-5">Docs</th>
+                          <th className="px-8 py-5">Status</th>
                           <th className="px-8 py-5 text-right">Action</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50 text-sm font-bold">
                       {loading ? (
-                          <tr><td colSpan={5} className="py-20 text-center text-neutral-300 uppercase tracking-widest text-xs animate-pulse">Syncing Secure Queue...</td></tr>
+                          <tr><td colSpan={7} className="py-20 text-center text-neutral-300 uppercase tracking-widest text-xs animate-pulse">Syncing Secure Queue...</td></tr>
                       ) : queue.length === 0 ? (
-                          <tr><td colSpan={5} className="py-20 text-center text-neutral-400 uppercase text-xs">No {activeTab.toLowerCase()} requests found.</td></tr>
+                          <tr><td colSpan={7} className="py-20 text-center text-neutral-400 uppercase text-xs">No {activeTab.toLowerCase()} requests found.</td></tr>
                       ) : (
                           queue.map(req => (
                               <tr key={req._id} className="hover:bg-neutral-50/50 transition-all group">
@@ -101,6 +103,17 @@ export default function VerificationQueue() {
                                       <div>
                                           <p className="text-neutral-900">{req.providerId?.userId?.firstName} {req.providerId?.userId?.lastName}</p>
                                           <p className="text-[10px] text-neutral-400 font-medium">{req.providerId?.userId?.email}</p>
+                                      </div>
+                                  </td>
+                                  <td className="px-8 py-5 text-xs text-neutral-500 uppercase">
+                                      {req.countryCode}
+                                  </td>
+                                  <td className="px-8 py-5">
+                                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                          {req.providerId?.servicesOffered?.slice(0, 3).map((s: string) => (
+                                              <span key={s} className="text-[8px] bg-neutral-100 px-1.5 py-0.5 rounded uppercase">{s}</span>
+                                          ))}
+                                          {(req.providerId?.servicesOffered?.length || 0) > 3 && <span className="text-[8px] text-neutral-400">+{req.providerId.servicesOffered.length - 3} more</span>}
                                       </div>
                                   </td>
                                   <td className="px-8 py-5">
@@ -114,7 +127,10 @@ export default function VerificationQueue() {
                                       {new Date(req.submittedAt).toLocaleDateString()}
                                   </td>
                                   <td className="px-8 py-5">
-                                      <span className="text-[10px] bg-neutral-100 px-2 py-0.5 rounded-full">{req.documents?.length} Files</span>
+                                      <span className={`text-[10px] font-black uppercase ${
+                                          req.status === 'APPROVED' ? 'text-green-600' :
+                                          req.status === 'REJECTED' ? 'text-red-600' : 'text-amber-600'
+                                      }`}>{req.status}</span>
                                   </td>
                                   <td className="px-8 py-5 text-right">
                                       <Link href={`/verification/${req._id}`}>

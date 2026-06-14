@@ -81,19 +81,26 @@ export default function DisputeDesk() {
       }
   };
 
-  const handleSettle = async (decision: string, customerAmt: number, providerAmt: number) => {
+  const handleSettle = async (decision: string, customerAmt: number, providerAmt: number, isVerified: boolean = false) => {
       if (!activeTicket) return;
       const reason = prompt(`Reason for ${decision}:`);
       if (!reason) return;
 
       try {
+          if (isVerified) {
+              await api.patch(`/api/admin/tickets/${activeTicket._id}/resolve`, {
+                  status: 'RESOLVED',
+                  isComplaintVerified: true,
+                  internalNotes: reason
+              });
+          }
           await api.post(`/api/admin/tickets/${activeTicket._id}/settle`, {
               decision,
               customerAmount: customerAmt,
               providerAmount: providerAmt,
               reason
           });
-          alert('Settlement processed successfully');
+          alert('Settlement processed successfully' + (isVerified ? '. Provider flagged for criminal check.' : ''));
           loadTickets();
           setActiveTicket(null);
       } catch (e: any) {
@@ -274,6 +281,12 @@ export default function DisputeDesk() {
                                         icon={<ArrowRight size={14} />}
                                         color="text-red-500 hover:bg-red-50 border-red-100"
                                         onClick={() => handleSettle('RELEASE_TO_CUSTOMER', activeTicket.jobId?.serviceFee || 0, 0)}
+                                    />
+                                    <ResolutionButton
+                                        label="Verify Complaint & Refund"
+                                        icon={<ShieldAlert size={14} />}
+                                        color="text-red-600 bg-red-50 border-red-200"
+                                        onClick={() => handleSettle('RELEASE_TO_CUSTOMER', activeTicket.jobId?.serviceFee || 0, 0, true)}
                                     />
                                     <ResolutionButton
                                         label="Split 50/50"
