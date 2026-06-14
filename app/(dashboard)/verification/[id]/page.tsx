@@ -166,17 +166,25 @@ export default function ReviewVerification() {
               <div className="flex-1 bg-[#1A1A1A] rounded-[40px] relative overflow-hidden flex items-center justify-center border-4 border-white shadow-2xl">
                    {selectedDoc ? (
                        <div
-                        className="transition-transform duration-200 ease-out cursor-move"
+                        className="transition-transform duration-200 ease-out cursor-move w-full h-full flex items-center justify-center"
                         style={{
-                            transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                            transform: selectedDoc.url?.includes('.pdf') || selectedDoc.url?.includes('pdf') ? '' : `scale(${zoom}) rotate(${rotation}deg)`,
                         }}
                        >
-                           <img
+                           {selectedDoc.url?.includes('.pdf') || selectedDoc.url?.includes('pdf') || selectedDoc.type?.includes('PDF') ? (
+                               <iframe
                                 src={selectedDoc.url}
-                                alt="Document"
-                                className="max-h-full max-w-full object-contain shadow-2xl rounded-sm"
-                                draggable={false}
-                           />
+                                className="w-full h-full rounded-sm"
+                                title="PDF Viewer"
+                               />
+                           ) : (
+                               <img
+                                    src={selectedDoc.url}
+                                    alt="Document"
+                                    className="max-h-full max-w-full object-contain shadow-2xl rounded-sm"
+                                    draggable={false}
+                               />
+                           )}
                        </div>
                    ) : (
                        <div className="text-neutral-500 flex flex-col items-center gap-4">
