@@ -313,6 +313,16 @@ export default function ServiceCatalog() {
                           <SelectGroup label="Verification Requirement" name="verificationLevel" options={VERIFICATION_LEVELS.map(l => ({ value: l, label: l.replace('_', ' ') }))} defaultValue={currentService?.verificationLevel} />
                           <FormGroup label="Equipment (Comma separated)" name="equipmentRequired" defaultValue={currentService?.equipmentRequired?.join(', ')} />
                           <FormGroup label="Target Country (Default: GLOBAL)" name="countryCode" defaultValue={currentService?.countryCode || 'GLOBAL'} />
+                          <div className="col-span-2">
+                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Service Details (Instructions & Scope)</label>
+                              <textarea
+                                  name="description"
+                                  defaultValue={currentService?.description}
+                                  rows={4}
+                                  placeholder="Describe the service scope, expectations, and limitations..."
+                                  className="w-full mt-2 bg-neutral-50 border border-neutral-100 rounded-2xl p-5 text-sm font-medium outline-none ring-1 ring-transparent focus:ring-neutral-900 focus:bg-white transition-all resize-none"
+                              />
+                          </div>
                           <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                                 <input type="checkbox" name="isActive" defaultChecked={currentService ? currentService.isActive : true} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
                                 <label className="text-xs font-black text-neutral-800 uppercase">Service Active</label>
