@@ -57,6 +57,7 @@ export default function DashboardLayout({
 
   const menuItems = [
     { name: "Analytics", href: "/analytics", icon: <BarChart3 size={18} /> },
+    { name: "Live Jobs", href: "/jobs", icon: <ClipboardList size={18} /> },
     { name: "Finance", href: "/finance", icon: <Wallet size={18} /> },
     { name: "Workspace Settings", href: "/settings", icon: <Settings size={18} /> },
     { name: "Service Catalog", href: "/services", icon: <ClipboardList size={18} /> },
