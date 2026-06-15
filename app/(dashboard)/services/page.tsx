@@ -260,7 +260,6 @@ export default function ServiceCatalog() {
                           <tr>
                               <th className="px-8 py-5">Code</th>
                               <th className="px-8 py-5">Display Name</th>
-                              <th className="px-8 py-5">Verification</th>
                               <th className="px-8 py-5">Sort</th>
                               <th className="px-8 py-5">Status</th>
                               <th className="px-8 py-5 text-right">Actions</th>
@@ -271,7 +270,6 @@ export default function ServiceCatalog() {
                               <tr key={cat._id} className="hover:bg-neutral-50/50 transition-all">
                                   <td className="px-8 py-5 font-mono text-xs text-neutral-400">{cat.code}</td>
                                   <td className="px-8 py-5 text-neutral-900">{cat.name}</td>
-                                  <td className="px-8 py-5 text-[10px] uppercase">{cat.verificationLevel}</td>
                                   <td className="px-8 py-5 text-[10px]">{cat.sortOrder}</td>
                                   <td className="px-8 py-5">
                                       <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${cat.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
@@ -348,7 +346,6 @@ export default function ServiceCatalog() {
                         <div className="col-span-2">
                              <FormGroup label="Description" name="description" defaultValue={currentCategory?.description} />
                         </div>
-                        <SelectGroup label="Verification Level" name="verificationLevel" options={VERIFICATION_LEVELS.map(l => ({ value: l, label: l.replace('_', ' ') }))} defaultValue={currentCategory?.verificationLevel} />
                         <FormGroup label="Sort Order" name="sortOrder" type="number" defaultValue={currentCategory?.sortOrder || 0} />
                         <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                             <input type="checkbox" name="isActive" defaultChecked={currentCategory ? currentCategory.isActive : true} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
