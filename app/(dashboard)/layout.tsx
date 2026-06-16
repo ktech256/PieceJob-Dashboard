@@ -23,7 +23,8 @@ import {
   LogOut,
   Globe,
   ChevronDown,
-  Clock
+  Clock,
+  CreditCard
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -68,6 +69,8 @@ export default function DashboardLayout({
     { name: "Zones", href: "/zones", icon: <MapIcon size={18} /> },
     { name: "Fraud Monitoring", href: "/fraud", icon: <ShieldAlert size={18} /> },
     { name: "System Management", href: "/sys-management", icon: <Settings size={18} /> },
+    { name: "Integrations", href: "/settings/integrations", icon: <Globe size={18} /> },
+    { name: "Payment Routing", href: "/settings/payment-routing", icon: <CreditCard size={18} /> },
     { name: "Audit Ledger", href: "/audit", icon: <History size={18} /> },
   ];
 
