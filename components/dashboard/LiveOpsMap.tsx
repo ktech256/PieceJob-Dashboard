@@ -69,7 +69,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
                 strokeWeight: 1,
                 strokeColor: "#ffffff",
                 scale: 1.5,
-                anchor: new google.maps.Point(12, 22)
+                anchor: typeof google !== 'undefined' ? new google.maps.Point(12, 22) : undefined
               }}
             />
         )
@@ -82,7 +82,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
               position={{ lat: j.location.coordinates[1], lng: j.location.coordinates[0] }}
               onClick={() => setSelected({ type: 'JOB', ...j })}
               icon={{
-                path: google.maps.SymbolPath.CIRCLE,
+                path: typeof google !== 'undefined' ? google.maps.SymbolPath.CIRCLE : 0,
                 fillColor: "#3b82f6",
                 fillOpacity: 0.6,
                 strokeWeight: 2,

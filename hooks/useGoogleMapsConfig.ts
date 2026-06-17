@@ -9,10 +9,15 @@ export function useGoogleMapsConfig() {
         const fetchConfig = async () => {
             try {
                 const res = await api.get('/api/admin/integrations');
-                const maps = res.data.data.find((i: any) => i.type === 'GOOGLE_MAPS');
-                if (maps && maps.isActive) {
-                    // Extract dashboard config
-                    setConfig(maps.config?.dashboard || null);
+
+                if (res.data?.success && Array.isArray(res.data.data)) {
+                    const maps = res.data.data.find((i: any) => i.type === 'GOOGLE_MAPS');
+                    if (maps && maps.isActive) {
+                        // Extract dashboard config
+                        setConfig(maps.config?.dashboard || null);
+                    }
+                } else {
+                    console.warn('Integration API returned unsuccessful response', res.data);
                 }
             } catch (e) {
                 console.error('Failed to fetch Google Maps config', e);

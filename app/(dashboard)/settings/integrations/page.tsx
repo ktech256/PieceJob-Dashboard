@@ -155,6 +155,12 @@ function IntegrationCard({ title, type, icon, description, fields, currentConfig
     const [isActive, setIsActive] = useState(true);
     const [activeTab, setActiveTab] = useState(tabs ? tabs[0].id : null);
 
+    useEffect(() => {
+        if (currentConfig && Object.keys(currentConfig).length > 0) {
+            setConfig(currentConfig);
+        }
+    }, [currentConfig]);
+
     const handleFieldChange = (path: string, value: string) => {
         const keys = path.split('.');
         const newConfig = { ...config };
