@@ -80,11 +80,27 @@ export default function IntegrationsSettings() {
                     description="Core geospatial engine for address selection, tracking, and distance calculation."
                     currentConfig={integrations.find(i => i.type === 'GOOGLE_MAPS')?.config || {}}
                     onSave={handleUpdate}
-                    fields={[
-                        { key: 'MAPS_API_KEY', label: 'Maps API Key', placeholder: 'AIza...' },
-                        { key: 'PLACES_API_KEY', label: 'Places API Key', placeholder: 'AIza...' },
-                        { key: 'DIRECTIONS_API_KEY', label: 'Directions API Key', placeholder: 'AIza...' },
-                        { key: 'GEOCODING_API_KEY', label: 'Geocoding API Key', placeholder: 'AIza...' }
+                    tabs={[
+                        {
+                            id: 'android',
+                            label: 'Android API Keys',
+                            fields: [
+                                { key: 'android.mapsApiKey', label: 'Maps SDK for Android', placeholder: 'AIza...' },
+                                { key: 'android.placesApiKey', label: 'Places API', placeholder: 'AIza...' },
+                                { key: 'android.directionsApiKey', label: 'Directions API', placeholder: 'AIza...' },
+                                { key: 'android.geocodingApiKey', label: 'Geocoding API', placeholder: 'AIza...' }
+                            ]
+                        },
+                        {
+                            id: 'dashboard',
+                            label: 'Dashboard API Keys',
+                            fields: [
+                                { key: 'dashboard.mapsJavascriptApiKey', label: 'Google Maps JavaScript API', placeholder: 'AIza...' },
+                                { key: 'dashboard.placesApiKey', label: 'Places API (Web)', placeholder: 'AIza...' },
+                                { key: 'dashboard.geocodingApiKey', label: 'Geocoding API', placeholder: 'AIza...' },
+                                { key: 'dashboard.directionsApiKey', label: 'Directions API', placeholder: 'AIza...' }
+                            ]
+                        }
                     ]}
                 />
 
@@ -134,13 +150,39 @@ export default function IntegrationsSettings() {
     );
 }
 
-function IntegrationCard({ title, type, icon, description, fields, currentConfig, onSave, readOnly = false }: any) {
+function IntegrationCard({ title, type, icon, description, fields, currentConfig, onSave, readOnly = false, tabs }: any) {
     const [config, setConfig] = useState(currentConfig);
     const [isActive, setIsActive] = useState(true);
+    const [activeTab, setActiveTab] = useState(tabs ? tabs[0].id : null);
 
-    const handleFieldChange = (key: string, value: string) => {
-        setConfig({ ...config, [key]: value });
+    const handleFieldChange = (path: string, value: string) => {
+        const keys = path.split('.');
+        const newConfig = { ...config };
+        let current = newConfig;
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) current[keys[i]] = {};
+            current[keys[i]] = { ...current[keys[i]] };
+            current = current[keys[i]];
+        }
+
+        current[keys[keys.length - 1]] = value;
+        setConfig(newConfig);
     };
+
+    const getFieldValue = (path: string) => {
+        const keys = path.split('.');
+        let current = config;
+        for (const key of keys) {
+            if (!current || typeof current !== 'object') return '';
+            current = current[key];
+        }
+        return current || '';
+    };
+
+    const currentFields = tabs
+        ? tabs.find((t: any) => t.id === activeTab)?.fields || []
+        : fields;
 
     return (
         <div className="bg-white border border-neutral-200 rounded-[40px] p-10 shadow-sm flex flex-col justify-between hover:border-neutral-900/10 transition-all">
@@ -163,13 +205,27 @@ function IntegrationCard({ title, type, icon, description, fields, currentConfig
 
                 <p className="text-sm text-neutral-500 leading-relaxed mb-8">{description}</p>
 
+                {tabs && (
+                    <div className="flex gap-2 mb-8 bg-neutral-50 p-1.5 rounded-2xl border border-neutral-100">
+                        {tabs.map((tab: any) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white shadow-sm border border-neutral-100 text-neutral-900' : 'text-neutral-400 hover:text-neutral-600'}`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 <div className="space-y-6">
-                    {fields.map((field: any) => (
+                    {currentFields.map((field: any) => (
                         <div key={field.key} className="space-y-2">
                             <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">{field.label}</label>
                             <input
                                 type="password"
-                                value={config[field.key] || ''}
+                                value={getFieldValue(field.key)}
                                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                                 readOnly={readOnly}
                                 placeholder={field.placeholder}
