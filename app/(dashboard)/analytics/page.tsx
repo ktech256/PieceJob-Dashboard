@@ -27,12 +27,15 @@ export default function AnalyticsDashboard() {
             api.get(`/api/admin/analytics/summary?countryCode=${countryCode}`),
             api.get(`/api/admin/analytics/live-ops?countryCode=${countryCode}`)
         ]);
-        setStats(statsRes.data.stats);
-        setLiveOps(liveRes.data.data);
+        console.log('Stats Response:', statsRes.data);
+        console.log('LiveOps Response:', liveRes.data);
+        setStats(statsRes.data?.stats || {});
+        setLiveOps(liveRes.data?.data || { providers: [], activeJobs: [] });
 
         if (isGlobal) {
             const breakdownRes = await api.get('/api/admin/analytics/global-breakdown');
-            setBreakdown(breakdownRes.data.breakdown);
+            console.log('Breakdown Response:', breakdownRes.data);
+            setBreakdown(breakdownRes.data?.breakdown || { byCountry: [] });
         }
     } catch (e: any) {
         console.error('Data Fetch Failed:', e.response?.data || e.message);
@@ -93,33 +96,33 @@ export default function AnalyticsDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Gross Revenue"
-          value={formatCurrency(stats.financials?.grossRevenue || 0, stats.currency)}
-          trend={`${stats.growth?.revenueGrowth?.percentage.toFixed(1)}%`}
-          isPositive={stats.growth?.revenueGrowth?.percentage >= 0}
+          value={formatCurrency(stats?.financials?.grossRevenue || 0, stats?.currency || 'USD')}
+          trend={`${(stats?.growth?.revenueGrowth?.percentage || 0).toFixed(1)}%`}
+          isPositive={(stats?.growth?.revenueGrowth?.percentage || 0) >= 0}
           icon={<Zap size={20} className="text-brand-customer-red" />}
           color="bg-brand-customer-red/5"
         />
         <StatCard
           title="Online Providers"
-          value={stats.operations?.providers?.onlineProviders?.toString() || "0"}
-          trend={`${stats.growth?.providerGrowth?.percentage.toFixed(1)}%`}
-          isPositive={stats.growth?.providerGrowth?.percentage >= 0}
+          value={stats?.operations?.providers?.onlineProviders?.toString() || "0"}
+          trend={`${(stats?.growth?.providerGrowth?.percentage || 0).toFixed(1)}%`}
+          isPositive={(stats?.growth?.providerGrowth?.percentage || 0) >= 0}
           icon={<Users size={20} className="text-brand-provider-green" />}
           color="bg-brand-provider-green/5"
         />
         <StatCard
           title="Efficiency Score"
-          value={`${stats.efficiency?.avgCompletionMinutes || 0}m`}
-          trend={`${stats.efficiency?.wavePerformance?.completionRate.toFixed(1)}%`}
-          isPositive={stats.efficiency?.wavePerformance?.completionRate >= 70}
+          value={`${stats?.efficiency?.avgCompletionMinutes || 0}m`}
+          trend={`${(stats?.efficiency?.wavePerformance?.completionRate || 0).toFixed(1)}%`}
+          isPositive={(stats?.efficiency?.wavePerformance?.completionRate || 0) >= 70}
           icon={<Activity size={20} className="text-blue-600" />}
           color="bg-blue-50"
         />
         <StatCard
           title="Active Jobs"
-          value={stats.business?.jobs?.activeJobs?.toString() || "0"}
-          trend={`${stats.growth?.jobGrowth?.percentage.toFixed(1)}%`}
-          isPositive={stats.growth?.jobGrowth?.percentage >= 0}
+          value={stats?.business?.jobs?.activeJobs?.toString() || "0"}
+          trend={`${(stats?.growth?.jobGrowth?.percentage || 0).toFixed(1)}%`}
+          isPositive={(stats?.growth?.jobGrowth?.percentage || 0) >= 0}
           icon={<Briefcase size={20} className="text-orange-600" />}
           color="bg-orange-50"
         />
@@ -178,17 +181,17 @@ export default function AnalyticsDashboard() {
                     <EfficiencyItem
                         icon={<Clock size={16} />}
                         label="Avg. Acceptance"
-                        value={`${stats.efficiency?.avgAcceptanceMinutes || 0}m`}
+                        value={`${stats?.efficiency?.avgAcceptanceMinutes || 0}m`}
                         subValue="Target: < 2m"
-                        percent={Math.min(100, Math.max(0, 100 - ((stats.efficiency?.avgAcceptanceMinutes || 0) / 5) * 100))}
+                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgAcceptanceMinutes || 0) / (5 || 1)) * 100))}
                         color="bg-brand-provider-green"
                     />
                     <EfficiencyItem
                         icon={<MapPin size={16} />}
                         label="Avg. Arrival"
-                        value={`${stats.efficiency?.avgArrivalMinutes || 0}m`}
+                        value={`${stats?.efficiency?.avgArrivalMinutes || 0}m`}
                         subValue="Target: < 15m"
-                        percent={Math.min(100, Math.max(0, 100 - ((stats.efficiency?.avgArrivalMinutes || 0) / 30) * 100))}
+                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgArrivalMinutes || 0) / (30 || 1)) * 100))}
                         color="bg-blue-600"
                     />
                     <EfficiencyItem
@@ -233,13 +236,13 @@ export default function AnalyticsDashboard() {
                    <div>
                        <h3 className="text-sm font-black text-neutral-500 uppercase tracking-widest mb-8">Profitability Report</h3>
                        <div className="space-y-6">
-                           <ProfitRow label="Net Profit" value={formatCurrency(stats.financials?.netProfit || 0, stats.currency)} highlight />
-                           <ProfitRow label="Gross Margin" value={`${stats.financials?.margin?.toFixed(1)}%`} />
-                           <ProfitRow label="Payouts" value={formatCurrency(stats.financials?.payouts || 0, stats.currency)} />
+                           <ProfitRow label="Net Profit" value={formatCurrency(stats?.financials?.netProfit || 0, stats?.currency || 'USD')} highlight />
+                           <ProfitRow label="Gross Margin" value={`${(stats?.financials?.margin || 0).toFixed(1)}%`} />
+                           <ProfitRow label="Payouts" value={formatCurrency(stats?.financials?.payouts || 0, stats?.currency || 'USD')} />
                        </div>
                    </div>
                    <div className="pt-8 border-t border-white/5">
-                        <p className="text-[10px] text-neutral-500 font-bold uppercase leading-relaxed">Aggregated from {breakdown.byCountry?.length || 0} active workspaces using live exchange rates.</p>
+                        <p className="text-[10px] text-neutral-500 font-bold uppercase leading-relaxed">Aggregated from {breakdown?.byCountry?.length || 0} active workspaces using live exchange rates.</p>
                    </div>
               </div>
           </div>
