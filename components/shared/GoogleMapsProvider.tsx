@@ -11,7 +11,7 @@ interface GoogleMapsContextType {
 
 const GoogleMapsContext = createContext<GoogleMapsContextType | undefined>(undefined);
 
-const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places", "visualization", "drawing"];
+const libraries: ("places" | "drawing" | "visualization")[] = ["places", "visualization", "drawing"];
 
 export const GoogleMapsProvider = ({ children }: { children: ReactNode }) => {
   const { config, loading: configLoading } = useGoogleMapsConfig();
