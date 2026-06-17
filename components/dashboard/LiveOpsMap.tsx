@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { Badge } from "../ui/badge";
 import { useGoogleMaps } from '@/components/shared/GoogleMapsProvider';
-import { Users, User, Maximize2, Minimize2, Filter } from 'lucide-react';
+import { Users, User, Maximize2, Minimize2, Filter, Info } from 'lucide-react';
 
 const containerStyle = {
   width: '100%',
@@ -37,7 +37,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
     if (providerFilter === 'OFFLINE') p = providers.filter(x => !x.isOnline);
 
     let j = activeJobs;
-    // Note: Dashboard currently tracks active jobs as the "Customer" presence on map
+    // For Dashboard, Customers are represented by Active Jobs
     if (customerFilter === 'ACTIVE_JOB') j = activeJobs;
 
     return { filteredProviders: p, filteredJobs: j };
@@ -53,6 +53,40 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
     return defaultCenter;
   }, [filteredProviders]);
 
+  // Marker Style Helper
+  const getMarkerIcon = (type: 'PROVIDER' | 'CUSTOMER', data: any) => {
+      if (typeof google === 'undefined') return undefined;
+
+      let color = "#777777"; // Default Gray
+      let glow = false;
+
+      if (type === 'PROVIDER') {
+          if (data.isOnline) {
+              color = "#22c55e"; // Green
+              // Check if provider has an ongoing job (based on activeJobs list)
+              const hasJob = activeJobs.some(job => job.providerId?._id === data._id || job.providerId === data._id);
+              if (hasJob) glow = true;
+          } else {
+              color = "#ef4444"; // Red (Offline)
+          }
+      } else {
+          // CUSTOMER (Represented by job markers)
+          color = "#eab308"; // Yellow (Active Customer)
+          // Always glow for Active Job/Customer on this map
+          glow = true;
+      }
+
+      return {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeWeight: glow ? 4 : 2,
+          strokeColor: glow ? "#ffffff" : "#ffffff",
+          scale: glow ? 10 : 7,
+          // Simulated glowing effect via strokeWeight + anchor tweak if needed
+      };
+  };
+
   if (!isLoaded) return <div className="h-[500px] w-full bg-neutral-900 animate-pulse flex items-center justify-center text-white font-black uppercase">Initialising Geospatial Grid...</div>;
 
   return (
@@ -60,23 +94,29 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
 
       {/* MAP CONTROLS OVERLAY */}
       <div className="absolute top-6 right-6 z-10 flex flex-col gap-3">
-        {/* Fullscreen Toggle */}
         <button
           onClick={() => setIsFullscreen(!isFullscreen)}
           className="p-3 bg-white/90 backdrop-blur-xl border border-neutral-200 rounded-2xl shadow-2xl hover:bg-white transition-all text-neutral-900"
-          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
           {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
         </button>
 
-        {/* Filters Panel */}
-        <div className="bg-white/90 backdrop-blur-xl border border-neutral-200 p-4 rounded-3xl shadow-2xl space-y-4 min-w-[200px]">
-            <div className="flex items-center gap-2 mb-2">
-                <Filter size={14} className="text-neutral-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Map Filters</span>
+        <div className="bg-white/90 backdrop-blur-xl border border-neutral-200 p-4 rounded-3xl shadow-2xl space-y-4 min-w-[220px]">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                    <Filter size={14} className="text-neutral-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Map Legend</span>
+                </div>
             </div>
 
-            {/* Provider Filter */}
+            {/* LEGEND CONTENT */}
+            <div className="space-y-2 pb-2 border-b border-neutral-100">
+                <LegendItem color="#22c55e" label="Provider Online" />
+                <LegendItem color="#22c55e" label="Provider w/ Job" glow />
+                <LegendItem color="#ef4444" label="Provider Offline" />
+                <LegendItem color="#eab308" label="Customer w/ Job" glow />
+            </div>
+
             <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-2">
                     <Users size={12} /> Providers
@@ -89,26 +129,6 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
                             className={`text-left px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${providerFilter === f ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100 text-neutral-600'}`}
                         >
                             {f === 'ALL' ? 'Show All' : f === 'ONLINE' ? 'Online Only' : 'Offline Only'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="h-px bg-neutral-100" />
-
-            {/* Customer/Job Filter */}
-            <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-2">
-                    <User size={12} /> Customers
-                </label>
-                <div className="grid grid-cols-1 gap-1">
-                    {(['ALL', 'ACTIVE_JOB'] as CustomerFilter[]).map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setCustomerFilter(f)}
-                            className={`text-left px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${customerFilter === f ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100 text-neutral-600'}`}
-                        >
-                            {f === 'ALL' ? 'Show All' : 'Active Jobs Only'}
                         </button>
                     ))}
                 </div>
@@ -128,46 +148,28 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
             ],
             disableDefaultUI: true,
             zoomControl: true,
-            mapTypeControl: false,
-            scaleControl: true,
-            streetViewControl: false,
-            rotateControl: true,
-            fullscreenControl: false
         }}
       >
+        {/* Providers */}
         {filteredProviders.map((p) => (
           p.location?.coordinates && (
               <Marker
                 key={p._id}
                 position={{ lat: p.location.coordinates[1], lng: p.location.coordinates[0] }}
                 onClick={() => setSelected({ type: 'PROVIDER', ...p })}
-                icon={{
-                  path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-                  fillColor: p.isOnline ? "#22c55e" : "#ef4444",
-                  fillOpacity: 1,
-                  strokeWeight: 1,
-                  strokeColor: "#ffffff",
-                  scale: 1.5,
-                  anchor: typeof google !== 'undefined' ? new google.maps.Point(12, 22) : undefined
-                }}
+                icon={getMarkerIcon('PROVIDER', p)}
               />
           )
         ))}
 
+        {/* Active Jobs (Customers) */}
         {filteredJobs.map((j) => (
           j.location?.coordinates && (
               <Marker
                 key={j._id}
                 position={{ lat: j.location.coordinates[1], lng: j.location.coordinates[0] }}
                 onClick={() => setSelected({ type: 'JOB', ...j })}
-                icon={{
-                  path: typeof google !== 'undefined' ? google.maps.SymbolPath.CIRCLE : 0,
-                  fillColor: "#3b82f6",
-                  fillOpacity: 0.6,
-                  strokeWeight: 2,
-                  strokeColor: "#ffffff",
-                  scale: 8
-                }}
+                icon={getMarkerIcon('CUSTOMER', j)}
               />
           )
         ))}
@@ -182,7 +184,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
           >
             <div className="p-2 space-y-2 max-w-[200px]">
               <p className="font-black uppercase text-xs tracking-tight">
-                  {selected.type === 'PROVIDER' ? 'Provider Info' : 'Active Job'}
+                  {selected.type === 'PROVIDER' ? 'Provider Info' : 'Active Engagement'}
               </p>
               <div className="h-px bg-neutral-100" />
               {selected.type === 'PROVIDER' ? (
@@ -207,3 +209,15 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
     </div>
   );
 };
+
+function LegendItem({ color, label, glow }: { color: string, label: string, glow?: boolean }) {
+    return (
+        <div className="flex items-center gap-3">
+            <div
+                className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ${glow ? 'animate-pulse ring-4 ring-white/30' : ''}`}
+                style={{ backgroundColor: color }}
+            ></div>
+            <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-tight">{label}</span>
+        </div>
+    );
+}
