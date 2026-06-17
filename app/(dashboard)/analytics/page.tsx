@@ -183,7 +183,7 @@ export default function AnalyticsDashboard() {
                         label="Avg. Acceptance"
                         value={`${stats?.efficiency?.avgAcceptanceMinutes || 0}m`}
                         subValue="Target: < 2m"
-                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgAcceptanceMinutes || 0) / (5 || 1)) * 100))}
+                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgAcceptanceMinutes || 0) / 5) * 100))}
                         color="bg-brand-provider-green"
                     />
                     <EfficiencyItem
@@ -191,7 +191,7 @@ export default function AnalyticsDashboard() {
                         label="Avg. Arrival"
                         value={`${stats?.efficiency?.avgArrivalMinutes || 0}m`}
                         subValue="Target: < 15m"
-                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgArrivalMinutes || 0) / (30 || 1)) * 100))}
+                        percent={Math.min(100, Math.max(0, 100 - ((stats?.efficiency?.avgArrivalMinutes || 0) / 30) * 100))}
                         color="bg-blue-600"
                     />
                     <EfficiencyItem
