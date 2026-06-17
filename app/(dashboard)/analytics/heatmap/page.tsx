@@ -11,8 +11,8 @@ import {
   TrendingUp,
   AlertCircle
 } from 'lucide-react';
-import { GoogleMap, useJsApiLoader, HeatmapLayer } from '@react-google-maps/api';
-import { useGoogleMapsConfig } from '@/hooks/useGoogleMapsConfig';
+import { GoogleMap, HeatmapLayer } from '@react-google-maps/api';
+import { useGoogleMaps } from '@/components/shared/GoogleMapsProvider';
 
 const containerStyle = {
   width: '100%',
@@ -30,12 +30,7 @@ export default function ServiceDemandHeatmap() {
   const [densityData, setDensityData] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
 
-  const { config: mapsConfig, loading: configLoading } = useGoogleMapsConfig();
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: mapsConfig?.mapsJavascriptApiKey || ""
-  });
+  const { isLoaded } = useGoogleMaps();
 
   const fetchData = async () => {
     setLoading(true);
@@ -111,7 +106,7 @@ export default function ServiceDemandHeatmap() {
 
         {/* MAP VISUALIZATION */}
         <div className="xl:col-span-3 bg-neutral-900 rounded-[40px] shadow-2xl relative overflow-hidden">
-            {isLoaded && !configLoading ? (
+            {isLoaded ? (
                 <GoogleMap
                     mapContainerStyle={containerStyle}
                     center={defaultCenter}

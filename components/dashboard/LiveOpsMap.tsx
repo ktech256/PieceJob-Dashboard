@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { Badge } from "../ui/badge";
-import { useGoogleMapsConfig } from '@/hooks/useGoogleMapsConfig';
+import { useGoogleMaps } from '@/components/shared/GoogleMapsProvider';
 
 const containerStyle = {
   width: '100%',
@@ -21,12 +21,7 @@ interface LiveOpsMapProps {
 }
 
 export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs }) => {
-  const { config: mapsConfig, loading: configLoading } = useGoogleMapsConfig();
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: mapsConfig?.mapsJavascriptApiKey || ""
-  });
+  const { isLoaded } = useGoogleMaps();
 
   const [selected, setSelected] = React.useState<any>(null);
 
@@ -40,7 +35,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
     return defaultCenter;
   }, [providers]);
 
-  if (!isLoaded || configLoading) return <div className="h-[500px] w-full bg-neutral-900 animate-pulse flex items-center justify-center text-white font-black uppercase">Initialising Geospatial Grid...</div>;
+  if (!isLoaded) return <div className="h-[500px] w-full bg-neutral-900 animate-pulse flex items-center justify-center text-white font-black uppercase">Initialising Geospatial Grid...</div>;
 
   return (
     <GoogleMap
