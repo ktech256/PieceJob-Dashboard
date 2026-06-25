@@ -25,7 +25,8 @@ import {
   Users,
   Briefcase,
   Layers,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 
 const mapContainerStyle = {
@@ -38,8 +39,6 @@ const defaultCenter = {
   lng: 28.0473
 };
 
-const libraries: "drawing"[] = ["drawing"];
-
 export default function ZoneManagement() {
   const { countryCode, currentCountry } = useCountryStore();
   const { isLoaded } = useGoogleMaps();
@@ -50,23 +49,31 @@ export default function ZoneManagement() {
   const [currentZone, setCurrentZone] = useState<any>(null);
   const [zoneStats, setZoneStats] = useState<any>(null);
 
+  // Form state
+  const [formData, setFormData] = useState({
+      name: '',
+      zoneCode: '',
+      cityName: '',
+      province: '',
+      isActive: true
+  });
+
   // Drawing state
   const [drawingMode, setDrawingManagerMode] = useState<any>(null);
   const [tempPolygon, setTempPolygon] = useState<any>(null);
   const drawingManagerRef = useRef<any>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [map, setMap] = useState<any>(null);
+  const autocompleteRef = useRef<any>(null);
 
   useEffect(() => {
       setMounted(true);
   }, []);
 
   const loadZones = async () => {
-// ...
     setLoading(true);
     try {
         const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
-        setZones(res.data.data || res.data.zones || []);
+        setZones(res.data?.data || res.data?.zones || []);
     } catch (e) {
         console.error('Failed to load zones');
     } finally {
@@ -77,15 +84,15 @@ export default function ZoneManagement() {
   const loadZoneStats = async (id: string) => {
       try {
           const res = await api.get(`/api/admin/zones/${id}/stats`);
-          setZoneStats(res.data.data);
+          setZoneStats(res.data?.data || null);
       } catch (e) {
           setZoneStats(null);
       }
   };
 
   useEffect(() => {
-    if (countryCode) loadZones();
-  }, [countryCode]);
+    if (countryCode && mounted) loadZones();
+  }, [countryCode, mounted]);
 
   useEffect(() => {
       if (currentZone?._id) {
@@ -95,7 +102,9 @@ export default function ZoneManagement() {
       }
   }, [currentZone]);
 
-  const onPolygonComplete = (polygon: google.maps.Polygon) => {
+  const onPolygonComplete = (polygon: any) => {
+      if (typeof polygon.getPath !== 'function') return;
+
       const path = polygon.getPath();
       const coords = [];
       for (let i = 0; i < path.getLength(); i++) {
@@ -109,7 +118,7 @@ export default function ZoneManagement() {
 
       setTempPolygon(coords);
       setDrawingManagerMode(null);
-      polygon.setMap(null); // Remove the drawn overlay, we will use our own state
+      polygon.setMap(null);
   };
 
   const handlePlaceChanged = () => {
@@ -119,32 +128,21 @@ export default function ZoneManagement() {
       map?.panTo(place.geometry.location);
       map?.setZoom(13);
 
-      // If place has viewport/bounds, we can potentially auto-suggest a zone,
-      // but Google doesn't give polygons easily.
-      // We will at least center the map.
-
-      // Auto-fill some fields from place components
       const addressComponents = place.address_components || [];
-      const country = addressComponents.find(c => c.types.includes('country'))?.long_name;
-      const province = addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+      const province = addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name || '';
       const city = addressComponents.find(c => c.types.includes('locality'))?.long_name ||
-                   addressComponents.find(c => c.types.includes('postal_town'))?.long_name;
+                   addressComponents.find(c => c.types.includes('postal_town'))?.long_name || '';
 
-      if (showForm) {
-          const nameInput = document.getElementsByName('name')[0] as HTMLInputElement;
-          const cityInput = document.getElementsByName('cityName')[0] as HTMLInputElement;
-          const provinceInput = document.getElementsByName('province')[0] as HTMLInputElement;
-
-          if (nameInput && !nameInput.value) nameInput.value = place.name || '';
-          if (cityInput) cityInput.value = city || '';
-          if (provinceInput) provinceInput.value = province || '';
-      }
+      setFormData(prev => ({
+          ...prev,
+          name: prev.name || place.name || '',
+          cityName: city,
+          province: province
+      }));
   };
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
-      const formData = new FormData(e.currentTarget);
-      const data: any = Object.fromEntries(formData.entries());
 
       if (!tempPolygon && !currentZone?.boundary) {
           alert('Please draw a zone on the map first.');
@@ -152,13 +150,9 @@ export default function ZoneManagement() {
       }
 
       const payload = {
-          name: data.name,
-          zoneCode: data.zoneCode,
-          cityName: data.cityName,
-          province: data.province,
+          ...formData,
           countryCode: countryCode,
           countryName: currentCountry?.name || 'Unknown',
-          isActive: data.isActive === 'on',
           boundary: {
               type: "Polygon",
               coordinates: [tempPolygon || currentZone.boundary.coordinates[0]]
@@ -214,7 +208,7 @@ export default function ZoneManagement() {
 
   if (!mounted) {
       return (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center min-h-[400px]">
               <RefreshCcw className="animate-spin text-neutral-300" size={32} />
           </div>
       );
@@ -229,7 +223,12 @@ export default function ZoneManagement() {
         </div>
         <div className="flex gap-3">
             <button
-                onClick={() => { setCurrentZone(null); setTempPolygon(null); setShowForm(true); }}
+                onClick={() => {
+                    setCurrentZone(null);
+                    setTempPolygon(null);
+                    setFormData({ name: '', zoneCode: '', cityName: '', province: '', isActive: true });
+                    setShowForm(true);
+                }}
                 className="bg-neutral-900 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-xl shadow-black/10"
             >
                 <Plus size={16} />
@@ -269,7 +268,23 @@ export default function ZoneManagement() {
                             <div className="flex justify-between items-center">
                                 <p className={`text-[10px] font-bold uppercase tracking-widest ${currentZone?._id === zone._id ? 'text-neutral-400' : 'text-neutral-400'}`}>{zone.cityName} • {zone.zoneCode}</p>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={(e) => { e.stopPropagation(); setCurrentZone(zone); setShowForm(true); }} className="p-1.5 bg-white text-neutral-900 rounded-lg shadow-sm border border-neutral-200"><Edit size={12} /></button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentZone(zone);
+                                            setFormData({
+                                                name: zone.name,
+                                                zoneCode: zone.zoneCode,
+                                                cityName: zone.cityName,
+                                                province: zone.province,
+                                                isActive: zone.isActive
+                                            });
+                                            setShowForm(true);
+                                        }}
+                                        className="p-1.5 bg-white text-neutral-900 rounded-lg shadow-sm border border-neutral-200"
+                                    >
+                                        <Edit size={12} />
+                                    </button>
                                     <button onClick={(e) => { e.stopPropagation(); handleToggle(zone._id, zone.isActive); }} className={`p-1.5 rounded-lg shadow-sm border ${zone.isActive ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}><Power size={12} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(zone._id); }} className="p-1.5 bg-red-50 text-red-600 rounded-lg shadow-sm border border-red-100"><Trash2 size={12} /></button>
                                 </div>
@@ -322,13 +337,12 @@ export default function ZoneManagement() {
                         zoomControl: true,
                     }}
                 >
-                    {/* DRAWING MANAGER */}
                     <DrawingManager
                         onLoad={dm => drawingManagerRef.current = dm}
                         onPolygonComplete={onPolygonComplete}
                         drawingMode={drawingMode}
                         options={{
-                            drawingControl: false, // We use our own buttons
+                            drawingControl: false,
                             polygonOptions: {
                                 fillColor: '#3b82f6',
                                 fillOpacity: 0.3,
@@ -341,7 +355,6 @@ export default function ZoneManagement() {
                         }}
                     />
 
-                    {/* RENDER EXISTING ZONES */}
                     {zones.map(zone => (
                         <Polygon
                             key={zone._id}
@@ -356,7 +369,6 @@ export default function ZoneManagement() {
                         />
                     ))}
 
-                    {/* RENDER TEMP DRAWING */}
                     {tempPolygon && (
                         <Polygon
                             paths={tempPolygonPath}
@@ -375,7 +387,6 @@ export default function ZoneManagement() {
 
             {/* MAP CONTROLS */}
             <div className="absolute top-8 left-8 flex flex-col gap-4">
-                {/* Search / Autocomplete */}
                 {isLoaded && (
                     <div className="w-80 relative group">
                         <Autocomplete
@@ -438,7 +449,7 @@ export default function ZoneManagement() {
               <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                       <div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter">{currentZone ? 'Edit regional boundary' : 'Define new geo-fence'}</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter">{currentZone?._id ? 'Edit regional boundary' : 'Define new geo-fence'}</h3>
                         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">Spatial data will propagate to Matching Engine.</p>
                       </div>
                       <button onClick={() => setShowForm(false)} className="p-3 hover:bg-white rounded-2xl transition-all"><X size={24} className="text-neutral-300" /></button>
@@ -447,23 +458,51 @@ export default function ZoneManagement() {
                       <div className="grid grid-cols-2 gap-6">
                           <div className="col-span-2 space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Zone Name</label>
-                              <input name="name" defaultValue={currentZone?.name} required placeholder="e.g. Sandton Business District" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-1 focus:ring-neutral-900 transition-all" />
+                              <input
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                required
+                                placeholder="e.g. Sandton Business District"
+                                className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-1 focus:ring-neutral-900 transition-all"
+                              />
                           </div>
                           <div className="space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Zone Code</label>
-                              <input name="zoneCode" defaultValue={currentZone?.zoneCode} required placeholder="e.g. JHB-CENTRAL" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
+                              <input
+                                value={formData.zoneCode}
+                                onChange={(e) => setFormData({...formData, zoneCode: e.target.value})}
+                                required
+                                placeholder="e.g. JHB-CENTRAL"
+                                className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none"
+                              />
                           </div>
                           <div className="space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">City / Municipality</label>
-                              <input name="cityName" defaultValue={currentZone?.cityName} required className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
+                              <input
+                                value={formData.cityName}
+                                onChange={(e) => setFormData({...formData, cityName: e.target.value})}
+                                required
+                                className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none"
+                              />
                           </div>
                           <div className="col-span-2 space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Province / State</label>
-                              <input name="province" defaultValue={currentZone?.province} required placeholder="e.g. Gauteng" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
+                              <input
+                                value={formData.province}
+                                onChange={(e) => setFormData({...formData, province: e.target.value})}
+                                required
+                                placeholder="e.g. Gauteng"
+                                className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none"
+                              />
                           </div>
                       </div>
                       <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                            <input type="checkbox" name="isActive" defaultChecked={currentZone ? currentZone.isActive : true} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+                            <input
+                                type="checkbox"
+                                checked={formData.isActive}
+                                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                                className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+                            />
                             <label className="text-xs font-black text-neutral-800 uppercase tracking-widest">Zone Active for Matching</label>
                       </div>
 
