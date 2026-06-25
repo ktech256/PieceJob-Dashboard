@@ -1,40 +1,66 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import api from '@/lib/api/axios';
 import { useCountryStore } from '@/lib/store/countryStore';
+import { useGoogleMaps } from '@/components/shared/GoogleMapsProvider';
+import {
+  GoogleMap,
+  DrawingManager,
+  Polygon,
+  Autocomplete,
+} from '@react-google-maps/api';
 import {
   Map as MapIcon,
-  Layers,
   Plus,
-  Target,
-  MousePointer2,
   Navigation,
   Save,
   Trash2,
-  Maximize2,
   Globe,
-  CheckCircle2,
   RefreshCcw,
   X,
   Edit,
   Power,
-  AlertTriangle
+  Search,
+  Users,
+  Briefcase,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
 
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%'
+};
+
+const defaultCenter = {
+  lat: -26.2041,
+  lng: 28.0473
+};
+
+const libraries: "drawing"[] = ["drawing"];
+
 export default function ZoneManagement() {
-  const { countryCode } = useCountryStore();
+  const { countryCode, currentCountry } = useCountryStore();
+  const { isLoaded } = useGoogleMaps();
   const [zones, setZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentZone, setCurrentService] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [currentZone, setCurrentZone] = useState<any>(null);
+  const [zoneStats, setZoneStats] = useState<any>(null);
+
+  // Drawing state
+  const [drawingMode, setDrawingManagerMode] = useState<google.maps.drawing.OverlayType | null>(null);
+  const [tempPolygon, setTempPolygon] = useState<any>(null);
+  const drawingManagerRef = useRef<any>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const loadZones = async () => {
     setLoading(true);
     try {
         const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
-        setZones(res.data.zones || []);
+        setZones(res.data.data || res.data.zones || []);
     } catch (e) {
         console.error('Failed to load zones');
     } finally {
@@ -42,29 +68,94 @@ export default function ZoneManagement() {
     }
   };
 
+  const loadZoneStats = async (id: string) => {
+      try {
+          const res = await api.get(`/api/admin/zones/${id}/stats`);
+          setZoneStats(res.data.data);
+      } catch (e) {
+          setZoneStats(null);
+      }
+  };
+
   useEffect(() => {
     if (countryCode) loadZones();
   }, [countryCode]);
+
+  useEffect(() => {
+      if (currentZone?._id) {
+          loadZoneStats(currentZone._id);
+      } else {
+          setZoneStats(null);
+      }
+  }, [currentZone]);
+
+  const onPolygonComplete = (polygon: google.maps.Polygon) => {
+      const path = polygon.getPath();
+      const coords = [];
+      for (let i = 0; i < path.getLength(); i++) {
+          const point = path.getAt(i);
+          coords.push([point.lng(), point.lat()]);
+      }
+      // Close the polygon
+      if (coords.length > 0) {
+          coords.push(coords[0]);
+      }
+
+      setTempPolygon(coords);
+      setDrawingManagerMode(null);
+      polygon.setMap(null); // Remove the drawn overlay, we will use our own state
+  };
+
+  const handlePlaceChanged = () => {
+      const place = autocompleteRef.current?.getPlace();
+      if (!place?.geometry?.location) return;
+
+      map?.panTo(place.geometry.location);
+      map?.setZoom(13);
+
+      // If place has viewport/bounds, we can potentially auto-suggest a zone,
+      // but Google doesn't give polygons easily.
+      // We will at least center the map.
+
+      // Auto-fill some fields from place components
+      const addressComponents = place.address_components || [];
+      const country = addressComponents.find(c => c.types.includes('country'))?.long_name;
+      const province = addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+      const city = addressComponents.find(c => c.types.includes('locality'))?.long_name ||
+                   addressComponents.find(c => c.types.includes('postal_town'))?.long_name;
+
+      if (showForm) {
+          const nameInput = document.getElementsByName('name')[0] as HTMLInputElement;
+          const cityInput = document.getElementsByName('cityName')[0] as HTMLInputElement;
+          const provinceInput = document.getElementsByName('province')[0] as HTMLInputElement;
+
+          if (nameInput && !nameInput.value) nameInput.value = place.name || '';
+          if (cityInput) cityInput.value = city || '';
+          if (provinceInput) provinceInput.value = province || '';
+      }
+  };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       const formData = new FormData(e.currentTarget);
       const data: any = Object.fromEntries(formData.entries());
 
-      // Structural GeoJSON format
+      if (!tempPolygon && !currentZone?.boundary) {
+          alert('Please draw a zone on the map first.');
+          return;
+      }
+
       const payload = {
           name: data.name,
           zoneCode: data.zoneCode,
           cityName: data.cityName,
+          province: data.province,
+          countryCode: countryCode,
+          countryName: currentCountry?.name || 'Unknown',
           isActive: data.isActive === 'on',
           boundary: {
               type: "Polygon",
-              coordinates: [[
-                  [28.0473, -26.2041], // Simulated Jo'burg points
-                  [28.0483, -26.2051],
-                  [28.0493, -26.2061],
-                  [28.0473, -26.2041]
-              ]]
+              coordinates: [tempPolygon || currentZone.boundary.coordinates[0]]
           }
       };
 
@@ -75,6 +166,7 @@ export default function ZoneManagement() {
               await api.post('/api/admin/zones', payload);
           }
           setShowForm(false);
+          setTempPolygon(null);
           loadZones();
       } catch (e: any) {
           alert(e.response?.data?.message || 'Save failed');
@@ -94,14 +186,28 @@ export default function ZoneManagement() {
       if (!confirm('Are you sure? This might affect pricing rules.')) return;
       try {
           await api.delete(`/api/admin/zones/${id}`);
+          if (currentZone?._id === id) setCurrentZone(null);
           loadZones();
       } catch (e: any) {
           alert(e.response?.data?.message || 'Delete failed');
       }
   };
 
+  const getPolygonPath = (zone: any) => {
+      if (!zone?.boundary?.coordinates?.[0]) return [];
+      return zone.boundary.coordinates[0].map((coord: any) => ({
+          lat: coord[1],
+          lng: coord[0]
+      }));
+  };
+
+  const tempPolygonPath = tempPolygon ? tempPolygon.map((coord: any) => ({
+      lat: coord[1],
+      lng: coord[0]
+  })) : [];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 h-full flex flex-col">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">Geo-Fence Grid Constructor</h1>
@@ -109,7 +215,7 @@ export default function ZoneManagement() {
         </div>
         <div className="flex gap-3">
             <button
-                onClick={() => { setCurrentService(null); setShowForm(true); }}
+                onClick={() => { setCurrentZone(null); setTempPolygon(null); setShowForm(true); }}
                 className="bg-neutral-900 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-xl shadow-black/10"
             >
                 <Plus size={16} />
@@ -118,7 +224,7 @@ export default function ZoneManagement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-[750px]">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 flex-1 min-h-0">
         {/* ZONE LIST SIDEBAR */}
         <div className="xl:col-span-1 bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm flex flex-col">
             <div className="p-6 border-b flex justify-between items-center bg-neutral-50/50">
@@ -134,8 +240,13 @@ export default function ZoneManagement() {
                     zones.map((zone) => (
                         <div
                             key={zone._id}
-                            className={`p-6 transition-all group ${currentZone?._id === zone._id ? 'bg-neutral-900 text-white shadow-2xl' : 'hover:bg-neutral-50 bg-white'}`}
-                            onClick={() => setCurrentService(zone)}
+                            className={`p-6 transition-all group cursor-pointer ${currentZone?._id === zone._id ? 'bg-neutral-900 text-white shadow-2xl' : 'hover:bg-neutral-50 bg-white'}`}
+                            onClick={() => {
+                                setCurrentZone(zone);
+                                if (zone.boundary?.coordinates?.[0]?.[0]) {
+                                    map?.panTo({ lat: zone.boundary.coordinates[0][0][1], lng: zone.boundary.coordinates[0][0][0] });
+                                }
+                            }}
                         >
                             <div className="flex justify-between items-start mb-2">
                                 <h4 className="font-black tracking-tight uppercase text-sm">{zone.name}</h4>
@@ -144,7 +255,7 @@ export default function ZoneManagement() {
                             <div className="flex justify-between items-center">
                                 <p className={`text-[10px] font-bold uppercase tracking-widest ${currentZone?._id === zone._id ? 'text-neutral-400' : 'text-neutral-400'}`}>{zone.cityName} • {zone.zoneCode}</p>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={(e) => { e.stopPropagation(); setCurrentService(zone); setShowForm(true); }} className="p-1.5 bg-white text-neutral-900 rounded-lg shadow-sm border border-neutral-200"><Edit size={12} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setCurrentZone(zone); setShowForm(true); }} className="p-1.5 bg-white text-neutral-900 rounded-lg shadow-sm border border-neutral-200"><Edit size={12} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleToggle(zone._id, zone.isActive); }} className={`p-1.5 rounded-lg shadow-sm border ${zone.isActive ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}><Power size={12} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(zone._id); }} className="p-1.5 bg-red-50 text-red-600 rounded-lg shadow-sm border border-red-100"><Trash2 size={12} /></button>
                                 </div>
@@ -153,53 +264,155 @@ export default function ZoneManagement() {
                     ))
                 )}
             </div>
+
+            {/* ZONE STATS */}
+            {currentZone && zoneStats && (
+                <div className="p-6 bg-neutral-900 text-white border-t border-white/10 space-y-4">
+                    <h5 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Live Zone Metrics</h5>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <Users size={14} className="text-blue-400 mb-2" />
+                            <p className="text-lg font-black leading-none">{zoneStats.onlineProviders}</p>
+                            <p className="text-[8px] font-bold text-neutral-500 uppercase mt-1">Online</p>
+                        </div>
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <Layers size={14} className="text-green-400 mb-2" />
+                            <p className="text-lg font-black leading-none">{zoneStats.servicesAvailable}</p>
+                            <p className="text-[8px] font-bold text-neutral-500 uppercase mt-1">Services</p>
+                        </div>
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <Briefcase size={14} className="text-purple-400 mb-2" />
+                            <p className="text-lg font-black leading-none">{zoneStats.completedJobs}</p>
+                            <p className="text-[8px] font-bold text-neutral-500 uppercase mt-1">Jobs</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="p-6 bg-neutral-50 border-t">
                 <p className="text-[9px] font-black text-neutral-400 uppercase text-center tracking-[0.2em]">Data isolation: {countryCode}</p>
             </div>
         </div>
 
         {/* MAP VIEW */}
-        <div className="xl:col-span-3 bg-[#0A0A0A] rounded-[40px] shadow-2xl relative overflow-hidden group">
-            {/* Real Map would go here */}
-            <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/28.0473,-26.2041,11/1200x750?access_token=MAPBOX_TOKEN')] bg-cover opacity-60"></div>
+        <div className="xl:col-span-3 bg-[#0A0A0A] rounded-[40px] shadow-2xl relative overflow-hidden group border border-neutral-800">
+            {isLoaded ? (
+                <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={defaultCenter}
+                    zoom={11}
+                    onLoad={setMap}
+                    options={{
+                        styles: darkMapStyle,
+                        disableDefaultUI: true,
+                        zoomControl: true,
+                    }}
+                >
+                    {/* DRAWING MANAGER */}
+                    <DrawingManager
+                        onLoad={dm => drawingManagerRef.current = dm}
+                        onPolygonComplete={onPolygonComplete}
+                        drawingMode={drawingMode}
+                        options={{
+                            drawingControl: false, // We use our own buttons
+                            polygonOptions: {
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.3,
+                                strokeColor: '#3b82f6',
+                                strokeWeight: 2,
+                                clickable: false,
+                                editable: false,
+                                zIndex: 1
+                            }
+                        }}
+                    />
 
-            {/* Grid Overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                    {/* RENDER EXISTING ZONES */}
+                    {zones.map(zone => (
+                        <Polygon
+                            key={zone._id}
+                            paths={getPolygonPath(zone)}
+                            options={{
+                                fillColor: currentZone?._id === zone._id ? '#ef4444' : '#525252',
+                                fillOpacity: currentZone?._id === zone._id ? 0.4 : 0.2,
+                                strokeColor: currentZone?._id === zone._id ? '#ef4444' : '#737373',
+                                strokeWeight: 2,
+                            }}
+                            onClick={() => setCurrentZone(zone)}
+                        />
+                    ))}
 
-            {/* Simulated Zone Path */}
-            {currentZone && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[300px] h-[200px] border-4 border-blue-500 bg-blue-500/20 backdrop-blur-sm rounded-[40px] animate-pulse flex items-center justify-center relative shadow-[0_0_50px_rgba(59,130,246,0.3)]">
-                        <div className="absolute -top-3 -left-3 w-6 h-6 bg-white rounded-full border-4 border-blue-500"></div>
-                        <div className="absolute -top-3 -right-3 w-6 h-6 bg-white rounded-full border-4 border-blue-500"></div>
-                        <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-white rounded-full border-4 border-blue-500"></div>
-                        <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-white rounded-full border-4 border-blue-500"></div>
-                        <p className="text-white font-black uppercase text-[10px] tracking-widest">{currentZone.name}</p>
-                    </div>
-                </div>
+                    {/* RENDER TEMP DRAWING */}
+                    {tempPolygon && (
+                        <Polygon
+                            paths={tempPolygonPath}
+                            options={{
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.5,
+                                strokeColor: '#3b82f6',
+                                strokeWeight: 3,
+                            }}
+                        />
+                    )}
+                </GoogleMap>
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-neutral-500 font-bold uppercase tracking-widest text-xs animate-pulse">Initializing Map Engine...</div>
             )}
 
-            <div className="absolute top-8 left-8 flex gap-3">
-                <div className="bg-white/90 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl flex items-center gap-4">
-                    <div>
-                        <p className="text-[10px] font-black text-neutral-400 uppercase mb-1">Active Coordinates</p>
-                        <p className="text-sm font-black text-neutral-800 tracking-tighter">-26.2041, 28.0473</p>
+            {/* MAP CONTROLS */}
+            <div className="absolute top-8 left-8 flex flex-col gap-4">
+                {/* Search / Autocomplete */}
+                {isLoaded && (
+                    <div className="w-80 relative group">
+                        <Autocomplete
+                            onLoad={ac => autocompleteRef.current = dm}
+                            onPlaceChanged={handlePlaceChanged}
+                        >
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search Area / City..."
+                                    className="w-full bg-white/90 backdrop-blur-xl border border-white/20 pl-12 pr-4 py-4 rounded-2xl shadow-2xl text-sm font-bold text-neutral-900 placeholder:text-neutral-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+                            </div>
+                        </Autocomplete>
                     </div>
-                    <div className="w-px h-8 bg-neutral-200"></div>
-                    <div>
-                        <p className="text-[10px] font-black text-neutral-400 uppercase mb-1">Status</p>
-                        <p className="text-sm font-black text-blue-600">EDITOR_READY</p>
-                    </div>
+                )}
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setDrawingManagerMode(drawingMode === google.maps.drawing.OverlayType.POLYGON ? null : google.maps.drawing.OverlayType.POLYGON)}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl ${drawingMode === google.maps.drawing.OverlayType.POLYGON ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' : 'bg-white text-neutral-900 hover:bg-neutral-50'}`}
+                    >
+                        <Edit size={14} />
+                        {drawingMode === google.maps.drawing.OverlayType.POLYGON ? 'STOP DRAWING' : 'DRAW POLYGON'}
+                    </button>
+                    {tempPolygon && (
+                        <button
+                            onClick={() => setTempPolygon(null)}
+                            className="bg-red-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-red-700"
+                        >
+                            Clear Drawing
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="absolute bottom-8 left-8 bg-neutral-900/90 backdrop-blur border border-white/10 p-6 rounded-[32px] max-w-sm">
+            <div className="absolute bottom-8 right-8 flex flex-col items-end gap-3">
+                <div className="bg-neutral-900/90 backdrop-blur-xl border border-white/10 p-5 rounded-[24px] shadow-2xl flex flex-col items-end">
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Matching Precision</p>
+                    <p className="text-xs font-black text-white italic">2DSPHERE_INDEXED</p>
+                </div>
+            </div>
+
+            <div className="absolute bottom-8 left-8 bg-neutral-900/90 backdrop-blur border border-white/10 p-6 rounded-[32px] max-w-sm shadow-2xl">
                 <h4 className="text-white font-black text-xs uppercase mb-3 flex items-center gap-2">
                     <Navigation size={14} className="text-blue-500" />
                     Geometry Enforcement
                 </h4>
                 <p className="text-[10px] text-neutral-400 leading-relaxed font-medium">
-                    Polygons are validated server-side. Self-intersections are automatically corrected or rejected. Regional boundaries are enforced at the point of persistence.
+                    Polygons are validated server-side. Point-in-polygon resolution determines service availability for customers and broadcasting targets for providers.
                 </p>
             </div>
         </div>
@@ -220,15 +433,19 @@ export default function ZoneManagement() {
                       <div className="grid grid-cols-2 gap-6">
                           <div className="col-span-2 space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Zone Name</label>
-                              <input name="name" defaultValue={currentZone?.name} required className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-1 focus:ring-neutral-900 transition-all" />
+                              <input name="name" defaultValue={currentZone?.name} required placeholder="e.g. Sandton Business District" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-1 focus:ring-neutral-900 transition-all" />
                           </div>
                           <div className="space-y-1">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Zone Code</label>
                               <input name="zoneCode" defaultValue={currentZone?.zoneCode} required placeholder="e.g. JHB-CENTRAL" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
                           </div>
                           <div className="space-y-1">
-                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">City Name</label>
+                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">City / Municipality</label>
                               <input name="cityName" defaultValue={currentZone?.cityName} required className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Province / State</label>
+                              <input name="province" defaultValue={currentZone?.province} required placeholder="e.g. Gauteng" className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none" />
                           </div>
                       </div>
                       <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
@@ -236,15 +453,17 @@ export default function ZoneManagement() {
                             <label className="text-xs font-black text-neutral-800 uppercase tracking-widest">Zone Active for Matching</label>
                       </div>
 
-                      <div className="p-4 bg-yellow-50 rounded-2xl border border-yellow-100 flex gap-4">
-                          <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
-                          <p className="text-[10px] text-yellow-800 font-bold leading-relaxed uppercase">Manual coordinates injection active for constructor session. Draw tool requires active Mapbox clearance.</p>
-                      </div>
+                      {(!tempPolygon && !currentZone?.boundary) && (
+                          <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex gap-4 items-center">
+                              <X className="text-red-600 shrink-0" size={20} />
+                              <p className="text-[10px] text-red-800 font-bold leading-relaxed uppercase">Polygon coordinates missing. Draw boundary on map before saving.</p>
+                          </div>
+                      )}
 
                       <div className="pt-4">
                           <button type="submit" className="w-full bg-neutral-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
                             <Save size={18} />
-                            Save Geospatial Entity
+                            Commit Geofence Entity
                           </button>
                       </div>
                   </form>
@@ -254,3 +473,94 @@ export default function ZoneManagement() {
     </div>
   );
 }
+
+const darkMapStyle = [
+    { elementType: "geometry", stylers: [{ color: "#212121" }] },
+    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+    {
+      featureType: "administrative",
+      elementType: "geometry",
+      stylers: [{ color: "#757575" }],
+    },
+    {
+      featureType: "administrative.country",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#9e9e9e" }],
+    },
+    {
+      featureType: "administrative.land_parcel",
+      stylers: [{ visibility: "off" }],
+    },
+    {
+      featureType: "administrative.locality",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#bdbdbd" }],
+    },
+    {
+      featureType: "poi",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#757575" }],
+    },
+    {
+      featureType: "poi.park",
+      elementType: "geometry",
+      stylers: [{ color: "#181818" }],
+    },
+    {
+      featureType: "poi.park",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#616161" }],
+    },
+    {
+      featureType: "poi.park",
+      elementType: "labels.text.stroke",
+      stylers: [{ color: "#1b1b1b" }],
+    },
+    {
+      featureType: "road",
+      elementType: "geometry.fill",
+      stylers: [{ color: "#2c2c2c" }],
+    },
+    {
+      featureType: "road",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#8a8a8a" }],
+    },
+    {
+      featureType: "road.arterial",
+      elementType: "geometry",
+      stylers: [{ color: "#373737" }],
+    },
+    {
+      featureType: "road.highway",
+      elementType: "geometry",
+      stylers: [{ color: "#3c3c3c" }],
+    },
+    {
+      featureType: "road.highway.controlled_access",
+      elementType: "geometry",
+      stylers: [{ color: "#4e4e4e" }],
+    },
+    {
+      featureType: "road.local",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#616161" }],
+    },
+    {
+      featureType: "transit",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#757575" }],
+    },
+    {
+      featureType: "water",
+      elementType: "geometry",
+      stylers: [{ color: "#000000" }],
+    },
+    {
+      featureType: "water",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#3d3d3d" }],
+    },
+  ];
