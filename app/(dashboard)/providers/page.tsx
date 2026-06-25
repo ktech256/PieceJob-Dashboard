@@ -95,14 +95,15 @@ function LiveMonitor() {
                             <tr>
                                 <th className="px-8 py-4">Provider</th>
                                 <th className="px-8 py-4">Status</th>
-                                <th className="px-8 py-4">Last Heartbeat</th>
-                                <th className="px-8 py-4">Signal Integrity</th>
+                                <th className="px-8 py-4">Active Services</th>
+                                <th className="px-8 py-4">Location (Lat, Lng)</th>
+                                <th className="px-8 py-4">Last Activity</th>
                                 <th className="px-8 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-50 text-sm">
                             {providers.length === 0 ? (
-                                <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">No providers found in this workspace.</td></tr>
+                                <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400">No providers found in this workspace.</td></tr>
                             ) : (
                                 providers.map((p, i) => (
                                     <tr key={i} className="hover:bg-neutral-50/50 transition-all">
@@ -115,13 +116,30 @@ function LiveMonitor() {
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${p.isOnline ? 'bg-brand-provider-green' : 'bg-red-500 animate-pulse'}`}></div>
-                                                <span className="text-[10px] font-black uppercase text-neutral-700 tracking-tighter">{p.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+                                                <div className={`w-2 h-2 rounded-full ${
+                                                    p.currentAvailabilityStatus === 'ONLINE' ? 'bg-brand-provider-green' :
+                                                    p.currentAvailabilityStatus === 'BUSY' ? 'bg-orange-500 animate-pulse' : 'bg-red-500'
+                                                }`}></div>
+                                                <span className="text-[10px] font-black uppercase text-neutral-700 tracking-tighter">
+                                                    {p.currentAvailabilityStatus || (p.isOnline ? 'ONLINE' : 'OFFLINE')}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 font-mono text-[10px] font-bold text-neutral-500">{new Date(p.updatedAt).toLocaleTimeString()}</td>
                                         <td className="px-8 py-5">
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${p.isOnline ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{p.isOnline ? 'OPTIMAL' : 'LOST'}</span>
+                                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                                {p.servicesOffered?.map((s: string) => (
+                                                    <span key={s} className="bg-neutral-100 text-[8px] font-black px-1.5 py-0.5 rounded border border-neutral-200">{s}</span>
+                                                )) || <span className="text-neutral-400 text-[10px]">None</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 font-mono text-[10px] font-bold text-neutral-500">
+                                            {p.location?.coordinates?.length === 2 ? `${p.location.coordinates[1].toFixed(4)}, ${p.location.coordinates[0].toFixed(4)}` : '—'}
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="font-mono text-[10px] font-bold text-neutral-500">{new Date(p.updatedAt).toLocaleTimeString()}</span>
+                                                {p.lastOnlineAt && <span className="text-[8px] text-neutral-400 uppercase font-black mt-0.5">ON since {new Date(p.lastOnlineAt).toLocaleTimeString()}</span>}
+                                            </div>
                                         </td>
                                         <td className="px-8 py-5 text-right">
                                             <button className="text-neutral-400 hover:text-neutral-900 transition-all"><MoreHorizontal size={18} /></button>
