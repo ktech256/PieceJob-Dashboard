@@ -10,8 +10,10 @@ import {
   Polygon,
   Autocomplete,
 } from '@react-google-maps/api';
+import dynamic from 'next/dynamic';
 import {
   Map as MapIcon,
+// ...
   Plus,
   Navigation,
   Save,
@@ -39,8 +41,9 @@ const defaultCenter = {
   lng: 28.0473
 };
 
-export default function ZoneManagement() {
+function ZoneManagementContent() {
   const { countryCode, currentCountry } = useCountryStore();
+// ...
   const { isLoaded } = useGoogleMaps();
   const [mounted, setMounted] = useState(false);
   const [zones, setZones] = useState<any[]>([]);
@@ -617,3 +620,9 @@ const darkMapStyle = [
       stylers: [{ color: "#3d3d3d" }],
     },
   ];
+
+const ZoneManagement = dynamic(() => Promise.resolve(ZoneManagementContent), {
+  ssr: false,
+});
+
+export default ZoneManagement;
