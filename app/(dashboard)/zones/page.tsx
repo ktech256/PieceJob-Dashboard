@@ -43,6 +43,7 @@ const libraries: "drawing"[] = ["drawing"];
 export default function ZoneManagement() {
   const { countryCode, currentCountry } = useCountryStore();
   const { isLoaded } = useGoogleMaps();
+  const [mounted, setMounted] = useState(false);
   const [zones, setZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -50,13 +51,18 @@ export default function ZoneManagement() {
   const [zoneStats, setZoneStats] = useState<any>(null);
 
   // Drawing state
-  const [drawingMode, setDrawingManagerMode] = useState<google.maps.drawing.OverlayType | null>(null);
+  const [drawingMode, setDrawingManagerMode] = useState<any>(null);
   const [tempPolygon, setTempPolygon] = useState<any>(null);
   const drawingManagerRef = useRef<any>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
+  useEffect(() => {
+      setMounted(true);
+  }, []);
+
   const loadZones = async () => {
+// ...
     setLoading(true);
     try {
         const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
@@ -205,6 +211,14 @@ export default function ZoneManagement() {
       lat: coord[1],
       lng: coord[0]
   })) : [];
+
+  if (!mounted) {
+      return (
+          <div className="flex h-full items-center justify-center">
+              <RefreshCcw className="animate-spin text-neutral-300" size={32} />
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-8 h-full flex flex-col">
@@ -382,11 +396,11 @@ export default function ZoneManagement() {
 
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setDrawingManagerMode(drawingMode === google.maps.drawing.OverlayType.POLYGON ? null : google.maps.drawing.OverlayType.POLYGON)}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl ${drawingMode === google.maps.drawing.OverlayType.POLYGON ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' : 'bg-white text-neutral-900 hover:bg-neutral-50'}`}
+                        onClick={() => setDrawingManagerMode(drawingMode === 'polygon' ? null : 'polygon')}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl ${drawingMode === 'polygon' ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' : 'bg-white text-neutral-900 hover:bg-neutral-50'}`}
                     >
                         <Edit size={14} />
-                        {drawingMode === google.maps.drawing.OverlayType.POLYGON ? 'STOP DRAWING' : 'DRAW POLYGON'}
+                        {drawingMode === 'polygon' ? 'STOP DRAWING' : 'DRAW POLYGON'}
                     </button>
                     {tempPolygon && (
                         <button
