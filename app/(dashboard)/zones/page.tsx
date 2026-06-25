@@ -365,7 +365,7 @@ export default function ZoneManagement() {
                 {isLoaded && (
                     <div className="w-80 relative group">
                         <Autocomplete
-                            onLoad={ac => autocompleteRef.current = dm}
+                            onLoad={ac => autocompleteRef.current = ac}
                             onPlaceChanged={handlePlaceChanged}
                         >
                             <div className="relative">
