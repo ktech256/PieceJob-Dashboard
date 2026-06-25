@@ -129,9 +129,9 @@ export default function ZoneManagement() {
       map?.setZoom(13);
 
       const addressComponents = place.address_components || [];
-      const province = addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name || '';
-      const city = addressComponents.find(c => c.types.includes('locality'))?.long_name ||
-                   addressComponents.find(c => c.types.includes('postal_town'))?.long_name || '';
+      const province = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'))?.long_name || '';
+      const city = addressComponents.find((c: any) => c.types.includes('locality'))?.long_name ||
+                   addressComponents.find((c: any) => c.types.includes('postal_town'))?.long_name || '';
 
       setFormData(prev => ({
           ...prev,
