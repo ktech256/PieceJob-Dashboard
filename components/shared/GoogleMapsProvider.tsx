@@ -11,7 +11,7 @@ interface GoogleMapsContextType {
 
 const GoogleMapsContext = createContext<GoogleMapsContextType | undefined>(undefined);
 
-const libraries: ("places" | "drawing" | "visualization")[] = ["places", "visualization", "drawing"];
+const libraries: ("places" | "visualization")[] = ["places", "visualization"];
 
 /**
  * Global provider for Google Maps.

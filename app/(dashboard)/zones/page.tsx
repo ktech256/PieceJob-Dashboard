@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import api from '@/lib/api/axios';
 import { useCountryStore } from '@/lib/store/countryStore';
 import { useGoogleMaps } from '@/components/shared/GoogleMapsProvider';
 import {
   GoogleMap,
-  DrawingManager,
   Polygon,
-  Autocomplete,
+  InfoWindow,
 } from '@react-google-maps/api';
 import dynamic from 'next/dynamic';
 import {
   Map as MapIcon,
-// ...
   Plus,
   Navigation,
   Save,
@@ -28,7 +26,9 @@ import {
   Briefcase,
   Layers,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  MapPin,
+  Check
 } from 'lucide-react';
 
 const mapContainerStyle = {
@@ -43,7 +43,6 @@ const defaultCenter = {
 
 function ZoneManagementContent() {
   const { countryCode, currentCountry } = useCountryStore();
-// ...
   const { isLoaded } = useGoogleMaps();
   const [mounted, setMounted] = useState(false);
   const [zones, setZones] = useState<any[]>([]);
@@ -61,12 +60,15 @@ function ZoneManagementContent() {
       isActive: true
   });
 
-  // Drawing state
-  const [drawingMode, setDrawingManagerMode] = useState<any>(null);
-  const [tempPolygon, setTempPolygon] = useState<any>(null);
-  const drawingManagerRef = useRef<any>(null);
-  const [map, setMap] = useState<any>(null);
-  const autocompleteRef = useRef<any>(null);
+  // Manual Drawing state
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawPath, setDrawPath] = useState<google.maps.LatLngLiteral[]>([]);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
       setMounted(true);
@@ -75,7 +77,7 @@ function ZoneManagementContent() {
   const loadZones = async () => {
     setLoading(true);
     try {
-        const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
+        const res = await api.get(`admin/zones?countryCode=${countryCode}`);
         setZones(res.data?.data || res.data?.zones || []);
     } catch (e) {
         console.error('Failed to load zones');
@@ -86,7 +88,7 @@ function ZoneManagementContent() {
 
   const loadZoneStats = async (id: string) => {
       try {
-          const res = await api.get(`/api/admin/zones/${id}/stats`);
+          const res = await api.get(`admin/zones/${id}/stats`);
           setZoneStats(res.data?.data || null);
       } catch (e) {
           setZoneStats(null);
@@ -105,49 +107,63 @@ function ZoneManagementContent() {
       }
   }, [currentZone]);
 
-  const onPolygonComplete = (polygon: any) => {
-      if (!polygon || typeof polygon.getPath !== 'function') return;
+  // Initialise Autocomplete manually to avoid @react-google-maps/api Autocomplete issues
+  useEffect(() => {
+    if (isLoaded && searchInputRef.current && !autocompleteRef.current) {
+        autocompleteRef.current = new google.maps.places.Autocomplete(searchInputRef.current, {
+            fields: ["geometry", "name", "address_components"],
+            types: ["(regions)"]
+        });
 
-      const path = polygon.getPath();
-      const coords = [];
-      for (let i = 0; i < path.getLength(); i++) {
-          const point = path.getAt(i);
-          coords.push([point.lng(), point.lat()]);
-      }
-      // Close the polygon
-      if (coords.length > 0) {
-          coords.push(coords[0]);
-      }
+        autocompleteRef.current.addListener("place_changed", () => {
+            const place = autocompleteRef.current?.getPlace();
+            if (!place?.geometry?.location) return;
 
-      setTempPolygon(coords);
-      setDrawingManagerMode(null);
-      polygon.setMap(null);
+            map?.panTo(place.geometry.location);
+            map?.setZoom(12);
+
+            const addressComponents = place.address_components || [];
+            const province = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'))?.long_name || '';
+            const city = addressComponents.find((c: any) => c.types.includes('locality'))?.long_name ||
+                         addressComponents.find((c: any) => c.types.includes('postal_town'))?.long_name || '';
+
+            setFormData(prev => ({
+                ...prev,
+                name: prev.name || place.name || '',
+                cityName: city,
+                province: province
+            }));
+        });
+    }
+  }, [isLoaded, map]);
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+      if (!isDrawing || !e.latLng) return;
+
+      const newPoint = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+      setDrawPath(prev => [...prev, newPoint]);
   };
 
-  const handlePlaceChanged = () => {
-      const place = autocompleteRef.current?.getPlace();
-      if (!place?.geometry?.location) return;
+  const undoLastPoint = () => {
+      setDrawPath(prev => prev.slice(0, -1));
+  };
 
-      map?.panTo(place.geometry.location);
-      map?.setZoom(13);
-
-      const addressComponents = place.address_components || [];
-      const province = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'))?.long_name || '';
-      const city = addressComponents.find((c: any) => c.types.includes('locality'))?.long_name ||
-                   addressComponents.find((c: any) => c.types.includes('postal_town'))?.long_name || '';
-
-      setFormData(prev => ({
-          ...prev,
-          name: prev.name || place.name || '',
-          cityName: city,
-          province: province
-      }));
+  const finishDrawing = () => {
+      if (drawPath.length < 3) {
+          alert("A zone needs at least 3 points.");
+          return;
+      }
+      setIsDrawing(false);
   };
 
   const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (!tempPolygon && !currentZone?.boundary) {
+      const finalCoords = drawPath.length > 0
+          ? [...drawPath.map(p => [p.lng, p.lat]), [drawPath[0].lng, drawPath[0].lat]] // Close the polygon
+          : currentZone?.boundary?.coordinates[0];
+
+      if (!finalCoords || finalCoords.length < 3) {
           alert('Please draw a zone on the map first.');
           return;
       }
@@ -158,18 +174,19 @@ function ZoneManagementContent() {
           countryName: currentCountry?.name || 'Unknown',
           boundary: {
               type: "Polygon",
-              coordinates: [tempPolygon || currentZone.boundary.coordinates[0]]
+              coordinates: [finalCoords]
           }
       };
 
       try {
           if (currentZone?._id) {
-              await api.patch(`/api/admin/zones/${currentZone._id}`, payload);
+              await api.patch(`admin/zones/${currentZone._id}`, payload);
           } else {
-              await api.post('/api/admin/zones', payload);
+              await api.post('admin/zones', payload);
           }
           setShowForm(false);
-          setTempPolygon(null);
+          setDrawPath([]);
+          setCurrentZone(null);
           loadZones();
       } catch (e: any) {
           alert(e.response?.data?.message || 'Save failed');
@@ -178,7 +195,7 @@ function ZoneManagementContent() {
 
   const handleToggle = async (id: string, active: boolean) => {
       try {
-          await api.patch(`/api/admin/zones/${id}/toggle`, { isActive: !active });
+          await api.patch(`admin/zones/${id}/toggle`, { isActive: !active });
           loadZones();
       } catch (e) {
           alert('Toggle failed');
@@ -188,7 +205,7 @@ function ZoneManagementContent() {
   const handleDelete = async (id: string) => {
       if (!confirm('Are you sure? This might affect pricing rules.')) return;
       try {
-          await api.delete(`/api/admin/zones/${id}`);
+          await api.delete(`admin/zones/${id}`);
           if (currentZone?._id === id) setCurrentZone(null);
           loadZones();
       } catch (e: any) {
@@ -204,10 +221,8 @@ function ZoneManagementContent() {
       }));
   };
 
-  const tempPolygonPath = tempPolygon ? tempPolygon.map((coord: any) => ({
-      lat: coord[1],
-      lng: coord[0]
-  })) : [];
+  // Convert legacy coordinates to LatLngLiterals for component
+  const currentZonePath = useMemo(() => getPolygonPath(currentZone), [currentZone]);
 
   if (!mounted) {
       return (
@@ -225,18 +240,37 @@ function ZoneManagementContent() {
           <p className="text-neutral-500 font-medium">Define regional isolation perimeters for Pricing, Matching, and Surcharges.</p>
         </div>
         <div className="flex gap-3">
-            <button
-                onClick={() => {
-                    setCurrentZone(null);
-                    setTempPolygon(null);
-                    setFormData({ name: '', zoneCode: '', cityName: '', province: '', isActive: true });
-                    setShowForm(true);
-                }}
-                className="bg-neutral-900 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-xl shadow-black/10"
-            >
-                <Plus size={16} />
-                Trace New Perimeter
-            </button>
+            {!isDrawing ? (
+                <button
+                    onClick={() => {
+                        setCurrentZone(null);
+                        setDrawPath([]);
+                        setFormData({ name: '', zoneCode: '', cityName: '', province: '', isActive: true });
+                        setShowForm(true);
+                        setIsDrawing(true);
+                    }}
+                    className="bg-neutral-900 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-xl shadow-black/10"
+                >
+                    <Plus size={16} />
+                    Trace New Perimeter
+                </button>
+            ) : (
+                <div className="flex gap-2">
+                    <button
+                        onClick={undoLastPoint}
+                        className="bg-neutral-200 text-neutral-800 px-6 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:bg-neutral-300 transition-all"
+                    >
+                        Undo Point
+                    </button>
+                    <button
+                        onClick={finishDrawing}
+                        className="bg-blue-600 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-500/20"
+                    >
+                        <Check size={16} />
+                        Finish Shape
+                    </button>
+                </div>
+            )}
         </div>
       </div>
 
@@ -259,6 +293,7 @@ function ZoneManagementContent() {
                             className={`p-6 transition-all group cursor-pointer ${currentZone?._id === zone._id ? 'bg-neutral-900 text-white shadow-2xl' : 'hover:bg-neutral-50 bg-white'}`}
                             onClick={() => {
                                 setCurrentZone(zone);
+                                setDrawPath([]); // Clear drawing if we select an existing zone
                                 if (zone.boundary?.coordinates?.[0]?.[0]) {
                                     map?.panTo({ lat: zone.boundary.coordinates[0][0][1], lng: zone.boundary.coordinates[0][0][0] });
                                 }
@@ -334,33 +369,15 @@ function ZoneManagementContent() {
                     center={defaultCenter}
                     zoom={11}
                     onLoad={setMap}
+                    onClick={handleMapClick}
                     options={{
                         styles: darkMapStyle,
                         disableDefaultUI: true,
                         zoomControl: true,
+                        draggableCursor: isDrawing ? 'crosshair' : 'grab'
                     }}
                 >
-                    {/* DRAWING MANAGER (Conditional to avoid crash if library fails to load) */}
-                    {isLoaded && typeof window !== 'undefined' && (window as any).google?.maps?.drawing && (
-                        <DrawingManager
-                            onLoad={dm => drawingManagerRef.current = dm}
-                            onPolygonComplete={onPolygonComplete}
-                            drawingMode={drawingMode}
-                            options={{
-                                drawingControl: false,
-                                polygonOptions: {
-                                    fillColor: '#3b82f6',
-                                    fillOpacity: 0.3,
-                                    strokeColor: '#3b82f6',
-                                    strokeWeight: 2,
-                                    clickable: false,
-                                    editable: false,
-                                    zIndex: 1
-                                }
-                            }}
-                        />
-                    )}
-
+                    {/* RENDER EXISTING ZONES */}
                     {zones.map(zone => (
                         <Polygon
                             key={zone._id}
@@ -375,14 +392,36 @@ function ZoneManagementContent() {
                         />
                     ))}
 
-                    {tempPolygon && (
+                    {/* RENDER TEMP DRAWING PATH */}
+                    {isDrawing && drawPath.length > 0 && (
                         <Polygon
-                            paths={tempPolygonPath}
+                            paths={drawPath}
                             options={{
                                 fillColor: '#3b82f6',
-                                fillOpacity: 0.5,
+                                fillOpacity: 0.3,
                                 strokeColor: '#3b82f6',
                                 strokeWeight: 3,
+                                clickable: false
+                            }}
+                        />
+                    )}
+
+                    {/* EDITABLE SELECTED ZONE */}
+                    {currentZone && !isDrawing && (
+                        <Polygon
+                            paths={currentZonePath}
+                            editable
+                            draggable
+                            onMouseUp={() => {
+                                // Logic to update currentZone path in state when edited
+                                // For now we keep it simple, but in production we would sync the path back
+                            }}
+                            options={{
+                                fillColor: '#ef4444',
+                                fillOpacity: 0.5,
+                                strokeColor: '#ef4444',
+                                strokeWeight: 3,
+                                zIndex: 10
                             }}
                         />
                     )}
@@ -392,58 +431,44 @@ function ZoneManagementContent() {
             )}
 
             {/* MAP CONTROLS */}
-            <div className="absolute top-8 left-8 flex flex-col gap-4">
-                {isLoaded && (
-                    <div className="w-80 relative group">
-                        <Autocomplete
-                            onLoad={ac => autocompleteRef.current = ac}
-                            onPlaceChanged={handlePlaceChanged}
-                        >
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Search Area / City..."
-                                    className="w-full bg-white/90 backdrop-blur-xl border border-white/20 pl-12 pr-4 py-4 rounded-2xl shadow-2xl text-sm font-bold text-neutral-900 placeholder:text-neutral-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-                            </div>
-                        </Autocomplete>
+            <div className="absolute top-8 left-8 flex flex-col gap-4 z-20">
+                {/* Search / Autocomplete */}
+                <div className="w-80 relative group">
+                    <div className="relative">
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder="Search Area / City..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white/90 backdrop-blur-xl border border-white/20 pl-12 pr-4 py-4 rounded-2xl shadow-2xl text-sm font-bold text-neutral-900 placeholder:text-neutral-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+                    </div>
+                </div>
+
+                {isDrawing && (
+                    <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+                        <MapPin size={16} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Click map to add boundaries</span>
                     </div>
                 )}
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setDrawingManagerMode(drawingMode === 'polygon' ? null : 'polygon')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl ${drawingMode === 'polygon' ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' : 'bg-white text-neutral-900 hover:bg-neutral-50'}`}
-                    >
-                        <Edit size={14} />
-                        {drawingMode === 'polygon' ? 'STOP DRAWING' : 'DRAW POLYGON'}
-                    </button>
-                    {tempPolygon && (
-                        <button
-                            onClick={() => setTempPolygon(null)}
-                            className="bg-red-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-red-700"
-                        >
-                            Clear Drawing
-                        </button>
-                    )}
-                </div>
             </div>
 
-            <div className="absolute bottom-8 right-8 flex flex-col items-end gap-3">
+            <div className="absolute bottom-8 right-8 flex flex-col items-end gap-3 z-20">
                 <div className="bg-neutral-900/90 backdrop-blur-xl border border-white/10 p-5 rounded-[24px] shadow-2xl flex flex-col items-end">
                     <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Matching Precision</p>
                     <p className="text-xs font-black text-white italic">2DSPHERE_INDEXED</p>
                 </div>
             </div>
 
-            <div className="absolute bottom-8 left-8 bg-neutral-900/90 backdrop-blur border border-white/10 p-6 rounded-[32px] max-w-sm shadow-2xl">
+            <div className="absolute bottom-8 left-8 bg-neutral-900/90 backdrop-blur border border-white/10 p-6 rounded-[32px] max-w-sm shadow-2xl z-20">
                 <h4 className="text-white font-black text-xs uppercase mb-3 flex items-center gap-2">
                     <Navigation size={14} className="text-blue-500" />
                     Geometry Enforcement
                 </h4>
                 <p className="text-[10px] text-neutral-400 leading-relaxed font-medium">
-                    Polygons are validated server-side. Point-in-polygon resolution determines service availability for customers and broadcasting targets for providers.
+                    DrawingManager has been decommissioned. Click directly on the map to define vertices. Polygons are validated server-side for regional isolation.
                 </p>
             </div>
         </div>
@@ -458,7 +483,7 @@ function ZoneManagementContent() {
                         <h3 className="text-2xl font-black uppercase tracking-tighter">{currentZone?._id ? 'Edit regional boundary' : 'Define new geo-fence'}</h3>
                         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">Spatial data will propagate to Matching Engine.</p>
                       </div>
-                      <button onClick={() => setShowForm(false)} className="p-3 hover:bg-white rounded-2xl transition-all"><X size={24} className="text-neutral-300" /></button>
+                      <button onClick={() => { setShowForm(false); setIsDrawing(false); }} className="p-3 hover:bg-white rounded-2xl transition-all"><X size={24} className="text-neutral-300" /></button>
                   </div>
                   <form onSubmit={handleSave} className="p-10 space-y-6">
                       <div className="grid grid-cols-2 gap-6">
@@ -512,10 +537,10 @@ function ZoneManagementContent() {
                             <label className="text-xs font-black text-neutral-800 uppercase tracking-widest">Zone Active for Matching</label>
                       </div>
 
-                      {(!tempPolygon && !currentZone?.boundary) && (
+                      {(drawPath.length === 0 && !currentZone?.boundary) && (
                           <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex gap-4 items-center">
                               <X className="text-red-600 shrink-0" size={20} />
-                              <p className="text-[10px] text-red-800 font-bold leading-relaxed uppercase">Polygon coordinates missing. Draw boundary on map before saving.</p>
+                              <p className="text-[10px] text-red-800 font-bold leading-relaxed uppercase">Polygon coordinates missing. Click on map behind this modal to add points.</p>
                           </div>
                       )}
 
