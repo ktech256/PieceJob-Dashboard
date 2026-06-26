@@ -64,6 +64,7 @@ function ZoneManagementContent() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawPath, setDrawPath] = useState<google.maps.LatLngLiteral[]>([]);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [isFetchingBoundary, setIsFetchingBoundary] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,6 +74,49 @@ function ZoneManagementContent() {
   useEffect(() => {
       setMounted(true);
   }, []);
+
+  const fetchBoundaryFromOSM = async (query: string) => {
+      setIsFetchingBoundary(true);
+      try {
+          // Use Nominatim to get GeoJSON boundary
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&polygon_geojson=1&limit=1`);
+          const data = await response.json();
+
+          if (data && data.length > 0 && data[0].geojson && (data[0].geojson.type === 'Polygon' || data[0].geojson.type === 'MultiPolygon')) {
+              let coords: any[] = [];
+              if (data[0].geojson.type === 'Polygon') {
+                  coords = data[0].geojson.coordinates[0];
+              } else {
+                  // Use the largest polygon for MultiPolygon
+                  coords = data[0].geojson.coordinates.sort((a: any, b: any) => b[0].length - a[0].length)[0][0];
+              }
+
+              const path = coords.map((c: any) => ({ lat: parseFloat(c[1]), lng: parseFloat(c[0]) }));
+              setDrawPath(path);
+              setIsDrawing(true);
+              return true;
+          }
+      } catch (e) {
+          console.error('OSM Boundary fetch failed', e);
+      } finally {
+          setIsFetchingBoundary(false);
+      }
+      return false;
+  };
+
+  const createBoundaryFromViewport = (viewport: google.maps.LatLngBounds) => {
+      const ne = viewport.getNorthEast();
+      const sw = viewport.getSouthWest();
+
+      const path = [
+          { lat: ne.lat(), lng: sw.lng() }, // Top Left
+          { lat: ne.lat(), lng: ne.lng() }, // Top Right
+          { lat: sw.lat(), lng: ne.lng() }, // Bottom Right
+          { lat: sw.lat(), lng: sw.lng() }, // Bottom Left
+      ];
+      setDrawPath(path);
+      setIsDrawing(true);
+  };
 
   const loadZones = async () => {
     setLoading(true);
@@ -115,7 +159,7 @@ function ZoneManagementContent() {
             types: ["(regions)"]
         });
 
-        autocompleteRef.current.addListener("place_changed", () => {
+        autocompleteRef.current.addListener("place_changed", async () => {
             const place = autocompleteRef.current?.getPlace();
             if (!place?.geometry?.location) return;
 
@@ -133,6 +177,13 @@ function ZoneManagementContent() {
                 cityName: city,
                 province: province
             }));
+
+            // Attempt to get boundary
+            setShowForm(true);
+            const found = await fetchBoundaryFromOSM(place.formatted_address || place.name || "");
+            if (!found && place.geometry.viewport) {
+                createBoundaryFromViewport(place.geometry.viewport);
+            }
         });
     }
   }, [isLoaded, map]);
@@ -248,6 +299,7 @@ function ZoneManagementContent() {
                         setFormData({ name: '', zoneCode: '', cityName: '', province: '', isActive: true });
                         setShowForm(true);
                         setIsDrawing(true);
+                        setIsFetchingBoundary(false);
                     }}
                     className="bg-neutral-900 text-white px-8 py-3 rounded-[24px] text-xs font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2 shadow-xl shadow-black/10"
                 >
@@ -447,6 +499,13 @@ function ZoneManagementContent() {
                     </div>
                 </div>
 
+                {isFetchingBoundary && (
+                    <div className="bg-neutral-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border border-white/10">
+                        <RefreshCcw size={16} className="animate-spin text-blue-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Scanning Spatial Boundaries...</span>
+                    </div>
+                )}
+
                 {isDrawing && (
                     <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
                         <MapPin size={16} />
@@ -465,10 +524,10 @@ function ZoneManagementContent() {
             <div className="absolute bottom-8 left-8 bg-neutral-900/90 backdrop-blur border border-white/10 p-6 rounded-[32px] max-w-sm shadow-2xl z-20">
                 <h4 className="text-white font-black text-xs uppercase mb-3 flex items-center gap-2">
                     <Navigation size={14} className="text-blue-500" />
-                    Geometry Enforcement
+                    Hybrid Boundary Acquisition
                 </h4>
                 <p className="text-[10px] text-neutral-400 leading-relaxed font-medium">
-                    DrawingManager has been decommissioned. Click directly on the map to define vertices. Polygons are validated server-side for regional isolation.
+                    The system attempts to retrieve official polygons via OpenStreetMap. If unavailable, it generates a viewport-based primitive. Administrators can refine vertices manually to ensure regional isolation accuracy.
                 </p>
             </div>
         </div>
