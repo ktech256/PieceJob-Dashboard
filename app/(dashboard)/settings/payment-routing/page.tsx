@@ -49,6 +49,7 @@ export default function PaymentRoutingSettings() {
 
         const payload = {
             ...data,
+            code: (data.code as string).trim().toLowerCase(), // Normalize code to lowercase
             isActive: data.isActive === 'on',
             priority: parseInt(data.priority as string) || 0,
             countryCode: countryCode, // Forced from workspace
