@@ -78,7 +78,6 @@ function ZoneManagementContent() {
   const fetchBoundaryFromOSM = async (query: string) => {
       setIsFetchingBoundary(true);
       try {
-          // Use Nominatim to get GeoJSON boundary
           const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&polygon_geojson=1&limit=1`);
           const data = await response.json();
 
@@ -87,7 +86,6 @@ function ZoneManagementContent() {
               if (data[0].geojson.type === 'Polygon') {
                   coords = data[0].geojson.coordinates[0];
               } else {
-                  // Use the largest polygon for MultiPolygon
                   coords = data[0].geojson.coordinates.sort((a: any, b: any) => b[0].length - a[0].length)[0][0];
               }
 
@@ -109,10 +107,10 @@ function ZoneManagementContent() {
       const sw = viewport.getSouthWest();
 
       const path = [
-          { lat: ne.lat(), lng: sw.lng() }, // Top Left
-          { lat: ne.lat(), lng: ne.lng() }, // Top Right
-          { lat: sw.lat(), lng: ne.lng() }, // Bottom Right
-          { lat: sw.lat(), lng: sw.lng() }, // Bottom Left
+          { lat: ne.lat(), lng: sw.lng() },
+          { lat: ne.lat(), lng: ne.lng() },
+          { lat: sw.lat(), lng: ne.lng() },
+          { lat: sw.lat(), lng: sw.lng() },
       ];
       setDrawPath(path);
       setIsDrawing(true);
@@ -121,7 +119,7 @@ function ZoneManagementContent() {
   const loadZones = async () => {
     setLoading(true);
     try {
-        const res = await api.get(`admin/zones?countryCode=${countryCode}`);
+        const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
         setZones(res.data?.data || res.data?.zones || []);
     } catch (e) {
         console.error('Failed to load zones');
@@ -132,7 +130,7 @@ function ZoneManagementContent() {
 
   const loadZoneStats = async (id: string) => {
       try {
-          const res = await api.get(`admin/zones/${id}/stats`);
+          const res = await api.get(`/api/admin/zones/${id}/stats`);
           setZoneStats(res.data?.data || null);
       } catch (e) {
           setZoneStats(null);
@@ -151,11 +149,10 @@ function ZoneManagementContent() {
       }
   }, [currentZone]);
 
-  // Initialise Autocomplete manually to avoid @react-google-maps/api Autocomplete issues
   useEffect(() => {
     if (isLoaded && searchInputRef.current && !autocompleteRef.current) {
         autocompleteRef.current = new google.maps.places.Autocomplete(searchInputRef.current, {
-            fields: ["geometry", "name", "address_components"],
+            fields: ["geometry", "name", "address_components", "formatted_address"],
             types: ["(regions)"]
         });
 
@@ -164,21 +161,26 @@ function ZoneManagementContent() {
             if (!place?.geometry?.location) return;
 
             map?.panTo(place.geometry.location);
-            map?.setZoom(12);
+            map?.setZoom(14);
 
             const addressComponents = place.address_components || [];
             const province = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'))?.long_name || '';
             const city = addressComponents.find((c: any) => c.types.includes('locality'))?.long_name ||
                          addressComponents.find((c: any) => c.types.includes('postal_town'))?.long_name || '';
 
-            setFormData(prev => ({
-                ...prev,
-                name: prev.name || place.name || '',
-                cityName: city,
-                province: province
-            }));
+            setFormData(prev => {
+                const newName = prev.name || place.name || '';
+                const generatedCode = newName.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '').slice(0, 15);
 
-            // Attempt to get boundary
+                return {
+                    ...prev,
+                    name: newName,
+                    cityName: city,
+                    province: province,
+                    zoneCode: prev.zoneCode || generatedCode
+                };
+            });
+
             setShowForm(true);
             const found = await fetchBoundaryFromOSM(place.formatted_address || place.name || "");
             if (!found && place.geometry.viewport) {
@@ -210,8 +212,13 @@ function ZoneManagementContent() {
   const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
 
+      if (countryCode === 'GLOBAL') {
+          alert('Please select a specific workspace (Country) before saving a geofence.');
+          return;
+      }
+
       const finalCoords = drawPath.length > 0
-          ? [...drawPath.map(p => [p.lng, p.lat]), [drawPath[0].lng, drawPath[0].lat]] // Close the polygon
+          ? [...drawPath.map(p => [p.lng, p.lat]), [drawPath[0].lng, drawPath[0].lat]]
           : currentZone?.boundary?.coordinates[0];
 
       if (!finalCoords || finalCoords.length < 3) {
@@ -229,24 +236,28 @@ function ZoneManagementContent() {
           }
       };
 
+      console.log('[GEOFENCE_SAVE] Payload:', JSON.stringify(payload, null, 2));
+
       try {
           if (currentZone?._id) {
-              await api.patch(`admin/zones/${currentZone._id}`, payload);
+              await api.patch(`/api/admin/zones/${currentZone._id}`, payload);
           } else {
-              await api.post('admin/zones', payload);
+              await api.post('/api/admin/zones', payload);
           }
           setShowForm(false);
           setDrawPath([]);
           setCurrentZone(null);
           loadZones();
       } catch (e: any) {
-          alert(e.response?.data?.message || 'Save failed');
+          console.error('[GEOFENCE_SAVE] Error:', e.response?.data || e.message);
+          const backendMessage = e.response?.data?.message || e.response?.data?.error || e.message;
+          alert(`Save failed: ${backendMessage}`);
       }
   };
 
   const handleToggle = async (id: string, active: boolean) => {
       try {
-          await api.patch(`admin/zones/${id}/toggle`, { isActive: !active });
+          await api.patch(`/api/admin/zones/${id}/toggle`, { isActive: !active });
           loadZones();
       } catch (e) {
           alert('Toggle failed');
@@ -256,7 +267,7 @@ function ZoneManagementContent() {
   const handleDelete = async (id: string) => {
       if (!confirm('Are you sure? This might affect pricing rules.')) return;
       try {
-          await api.delete(`admin/zones/${id}`);
+          await api.delete(`/api/admin/zones/${id}`);
           if (currentZone?._id === id) setCurrentZone(null);
           loadZones();
       } catch (e: any) {
@@ -272,7 +283,6 @@ function ZoneManagementContent() {
       }));
   };
 
-  // Convert legacy coordinates to LatLngLiterals for component
   const currentZonePath = useMemo(() => getPolygonPath(currentZone), [currentZone]);
 
   if (!mounted) {
@@ -345,7 +355,7 @@ function ZoneManagementContent() {
                             className={`p-6 transition-all group cursor-pointer ${currentZone?._id === zone._id ? 'bg-neutral-900 text-white shadow-2xl' : 'hover:bg-neutral-50 bg-white'}`}
                             onClick={() => {
                                 setCurrentZone(zone);
-                                setDrawPath([]); // Clear drawing if we select an existing zone
+                                setDrawPath([]);
                                 if (zone.boundary?.coordinates?.[0]?.[0]) {
                                     map?.panTo({ lat: zone.boundary.coordinates[0][0][1], lng: zone.boundary.coordinates[0][0][0] });
                                 }
@@ -429,7 +439,6 @@ function ZoneManagementContent() {
                         draggableCursor: isDrawing ? 'crosshair' : 'grab'
                     }}
                 >
-                    {/* RENDER EXISTING ZONES */}
                     {zones.map(zone => (
                         <Polygon
                             key={zone._id}
@@ -444,7 +453,6 @@ function ZoneManagementContent() {
                         />
                     ))}
 
-                    {/* RENDER TEMP DRAWING PATH */}
                     {isDrawing && drawPath.length > 0 && (
                         <Polygon
                             paths={drawPath}
@@ -458,16 +466,11 @@ function ZoneManagementContent() {
                         />
                     )}
 
-                    {/* EDITABLE SELECTED ZONE */}
                     {currentZone && !isDrawing && (
                         <Polygon
                             paths={currentZonePath}
                             editable
                             draggable
-                            onMouseUp={() => {
-                                // Logic to update currentZone path in state when edited
-                                // For now we keep it simple, but in production we would sync the path back
-                            }}
                             options={{
                                 fillColor: '#ef4444',
                                 fillOpacity: 0.5,
@@ -484,7 +487,6 @@ function ZoneManagementContent() {
 
             {/* MAP CONTROLS */}
             <div className="absolute top-8 left-8 flex flex-col gap-4 z-20">
-                {/* Search / Autocomplete */}
                 <div className="w-80 relative group">
                     <div className="relative">
                         <input
@@ -533,7 +535,6 @@ function ZoneManagementContent() {
         </div>
       </div>
 
-      {/* MODAL FORM */}
       {showForm && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
               <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
