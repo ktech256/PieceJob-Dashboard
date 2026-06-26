@@ -341,7 +341,7 @@ function ZoneManagementContent() {
                     }}
                 >
                     {/* DRAWING MANAGER (Conditional to avoid crash if library fails to load) */}
-                    {typeof google !== 'undefined' && google.maps.drawing && (
+                    {isLoaded && typeof window !== 'undefined' && (window as any).google?.maps?.drawing && (
                         <DrawingManager
                             onLoad={dm => drawingManagerRef.current = dm}
                             onPolygonComplete={onPolygonComplete}

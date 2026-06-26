@@ -15,18 +15,17 @@ export function useGoogleMapsConfig() {
         const fetchConfig = async () => {
             // If we don't have a token yet and we're in the browser, wait a bit
             const currentToken = token || localStorage.getItem('token');
+            console.log(`[MAP_CONFIG] Fetch attempt ${attempts + 1}. Token present: ${!!currentToken}`);
 
             if (!currentToken && attempts < maxAttempts) {
                 attempts++;
-                timerRef.current = setTimeout(fetchConfig, 1000);
+                timerRef.current = setTimeout(fetchConfig, 2000);
                 return;
             }
 
             try {
-                // Force headers for this critical call if needed
-                const res = await api.get('/api/admin/integrations', {
-                    headers: currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {}
-                });
+                const res = await api.get('/api/admin/integrations');
+                console.log(`[MAP_CONFIG] Status: ${res.status}`);
 
                 if (res.data?.success && Array.isArray(res.data.data)) {
                     const maps = res.data.data.find((i: any) => i.type === 'GOOGLE_MAPS');
