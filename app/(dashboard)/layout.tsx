@@ -49,11 +49,17 @@ export default function DashboardLayout({
     const loadCountries = async () => {
         try {
             const data = await fetchCountries();
+            if (!data) {
+                // Retry once after 2 seconds if failed
+                setTimeout(loadCountries, 2000);
+                return;
+            }
             setCountries(data);
             const active = data.find((c: Country) => c.code === countryCode);
             if (active) setCountry(active);
         } catch (e) {
-            console.error('Failed to load countries');
+            console.error('Failed to load countries, retrying...');
+            setTimeout(loadCountries, 3000);
         }
     };
     loadCountries();

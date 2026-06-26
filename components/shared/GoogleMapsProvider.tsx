@@ -49,7 +49,8 @@ const GoogleMapsScriptLoader = ({ apiKey, children }: { apiKey: string, children
     id: 'google-map-script-global',
     googleMapsApiKey: apiKey,
     libraries: libraries,
-    version: 'weekly'
+    version: '3.54',
+    mapIds: [] // Force a stable configuration
   });
 
   return (

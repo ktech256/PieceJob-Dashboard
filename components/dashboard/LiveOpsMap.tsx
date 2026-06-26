@@ -65,7 +65,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
 
   // Marker Style Helper
   const getMarkerIcon = (type: 'PROVIDER' | 'CUSTOMER', data: any) => {
-      if (typeof google === 'undefined') return undefined;
+      if (typeof window === 'undefined' || typeof google === 'undefined' || !google.maps) return undefined;
 
       let color = "#777777";
       let glow = false;
