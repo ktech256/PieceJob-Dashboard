@@ -12,7 +12,14 @@ import {
     Database,
     Zap
 } from 'lucide-react';
-import { format } from 'date-fns';
+
+const formatDate = (date: string | Date) => {
+    try {
+        return new Date(date).toLocaleString();
+    } catch (e) {
+        return 'N/A';
+    }
+};
 
 export default function HealthMonitor() {
     const [integrations, setIntegrations] = useState<any[]>([]);
@@ -74,12 +81,12 @@ export default function HealthMonitor() {
                             <div className="space-y-4">
                                 <HealthRow
                                     label="Last Success"
-                                    value={int.health?.lastSuccess ? format(new Date(int.health.lastSuccess), 'HH:mm:ss, d MMM') : 'Never'}
+                                    value={int.health?.lastSuccess ? formatDate(int.health.lastSuccess) : 'Never'}
                                     icon={<CheckCircle2 size={12} className="text-green-500" />}
                                 />
                                 <HealthRow
                                     label="Last Failure"
-                                    value={int.health?.lastFailure ? format(new Date(int.health.lastFailure), 'HH:mm:ss, d MMM') : 'None'}
+                                    value={int.health?.lastFailure ? formatDate(int.health.lastFailure) : 'None'}
                                     icon={<XCircle size={12} className={int.health?.lastFailure ? "text-red-500" : "text-neutral-300"} />}
                                 />
                             </div>

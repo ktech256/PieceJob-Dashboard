@@ -17,7 +17,10 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
+import { useCountryStore } from '@/lib/store/countryStore';
+
 export default function PaymentRoutingSettings() {
+    const { countryCode } = useCountryStore();
     const [providers, setProviders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -26,7 +29,7 @@ export default function PaymentRoutingSettings() {
     const loadProviders = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/api/admin/payment-providers');
+            const res = await api.get(`/api/admin/payment-providers?countryCode=${countryCode}`);
             setProviders(res.data.data);
         } catch (e) {
             console.error('Failed to load providers');
@@ -36,8 +39,8 @@ export default function PaymentRoutingSettings() {
     };
 
     useEffect(() => {
-        loadProviders();
-    }, []);
+        if (countryCode) loadProviders();
+    }, [countryCode]);
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -48,8 +51,8 @@ export default function PaymentRoutingSettings() {
             ...data,
             isActive: data.isActive === 'on',
             priority: parseInt(data.priority as string) || 0,
-            countries: (data.countries as string).split(',').map(c => c.trim().toUpperCase()),
-            currency: (data.currency as string).split(',').map(c => c.trim().toUpperCase()),
+            countryCode: countryCode, // Forced from workspace
+            currency: (data.currency as string).trim().toUpperCase(),
         };
 
         try {
@@ -106,12 +109,12 @@ export default function PaymentRoutingSettings() {
                                 <div className="flex items-center gap-4 mt-2">
                                     <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400">
                                         <MapPin size={12} />
-                                        {p.countries.join(', ')}
+                                        {p.countryCode}
                                     </div>
                                     <div className="w-px h-3 bg-neutral-100"></div>
                                     <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400">
                                         <CreditCard size={12} />
-                                        {p.currency.join(', ')}
+                                        {p.currency}
                                     </div>
                                 </div>
                             </div>
@@ -152,13 +155,13 @@ export default function PaymentRoutingSettings() {
                         <form onSubmit={handleSave} className="p-10 space-y-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <FormGroup label="Provider Name" name="name" defaultValue={currentProvider?.name} required />
-                                <FormGroup label="Provider Code (unique)" name="code" defaultValue={currentProvider?.code} required />
+                                <FormGroup label="Provider Code (e.g. paystack)" name="code" defaultValue={currentProvider?.code} required />
                                 <FormGroup label="Merchant ID" name="merchantId" defaultValue={currentProvider?.merchantId} />
                                 <FormGroup label="Public Key" name="publicKey" defaultValue={currentProvider?.publicKey} />
                                 <FormGroup label="Secret Key" name="secretKey" defaultValue={currentProvider?.secretKey} type="password" />
                                 <FormGroup label="Webhook Secret" name="webhookSecret" defaultValue={currentProvider?.webhookSecret} type="password" />
-                                <FormGroup label="Allowed Countries (e.g. ZA, NG)" name="countries" defaultValue={currentProvider?.countries?.join(', ')} />
-                                <FormGroup label="Currencies (e.g. ZAR, NGN)" name="currency" defaultValue={currentProvider?.currency?.join(', ')} />
+                                <FormGroup label="ISO Country Code" name="countryCode" defaultValue={currentProvider?.countryCode || countryCode} required />
+                                <FormGroup label="Currency (e.g. ZAR)" name="currency" defaultValue={currentProvider?.currency} required />
                                 <FormGroup label="Priority (0=Highest)" name="priority" defaultValue={currentProvider?.priority} type="number" />
                                 <SelectGroup label="Environment" name="environment" defaultValue={currentProvider?.environment} options={['sandbox', 'production']} />
 

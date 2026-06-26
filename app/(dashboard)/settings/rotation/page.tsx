@@ -13,7 +13,14 @@ import {
     ArrowRightLeft,
     AlertTriangle
 } from 'lucide-react';
-import { format } from 'date-fns';
+
+const formatDate = (date: string | Date) => {
+    try {
+        return new Date(date).toLocaleString();
+    } catch (e) {
+        return 'N/A';
+    }
+};
 
 export default function KeyRotationCenter() {
     const [integrations, setIntegrations] = useState<any[]>([]);
@@ -87,7 +94,7 @@ export default function KeyRotationCenter() {
                                     <div className="flex items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400">
                                             <Clock size={12} />
-                                            Last Rotated: {int.lastRotationDate ? format(new Date(int.lastRotationDate), 'd MMM yyyy, HH:mm') : 'Never'}
+                                            Last Rotated: {int.lastRotationDate ? formatDate(int.lastRotationDate) : 'Never'}
                                         </div>
                                     </div>
                                 </div>
