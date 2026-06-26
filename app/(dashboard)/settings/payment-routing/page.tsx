@@ -161,6 +161,7 @@ export default function PaymentRoutingSettings() {
                                 <FormGroup label="Public Key" name="publicKey" defaultValue={currentProvider?.publicKey} />
                                 <FormGroup label="Secret Key" name="secretKey" defaultValue={currentProvider?.secretKey} type="password" />
                                 <FormGroup label="Webhook Secret" name="webhookSecret" defaultValue={currentProvider?.webhookSecret} type="password" />
+                                <FormGroup label="Callback URL" name="callbackUrl" defaultValue={currentProvider?.callbackUrl} placeholder="e.g. piecejob://payment-callback" />
                                 <FormGroup label="ISO Country Code" name="countryCode" defaultValue={currentProvider?.countryCode || countryCode} required />
                                 <FormGroup label="Currency (e.g. ZAR)" name="currency" defaultValue={currentProvider?.currency} required />
                                 <FormGroup label="Priority (0=Highest)" name="priority" defaultValue={currentProvider?.priority} type="number" />
