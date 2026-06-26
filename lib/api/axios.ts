@@ -6,6 +6,11 @@ const api = axios.create({
   baseURL: baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL,
 });
 
+// For debugging in console
+if (typeof window !== 'undefined') {
+    (window as any)._PIECEJOB_API_BASE = baseURL;
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

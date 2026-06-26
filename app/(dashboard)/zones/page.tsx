@@ -75,7 +75,7 @@ function ZoneManagementContent() {
   const loadZones = async () => {
     setLoading(true);
     try {
-        const res = await api.get(`/api/admin/zones?countryCode=${countryCode}`);
+        const res = await api.get(`admin/zones?countryCode=${countryCode}`);
         setZones(res.data?.data || res.data?.zones || []);
     } catch (e) {
         console.error('Failed to load zones');
@@ -86,7 +86,7 @@ function ZoneManagementContent() {
 
   const loadZoneStats = async (id: string) => {
       try {
-          const res = await api.get(`/api/admin/zones/${id}/stats`);
+          const res = await api.get(`admin/zones/${id}/stats`);
           setZoneStats(res.data?.data || null);
       } catch (e) {
           setZoneStats(null);
@@ -106,7 +106,7 @@ function ZoneManagementContent() {
   }, [currentZone]);
 
   const onPolygonComplete = (polygon: any) => {
-      if (typeof polygon.getPath !== 'function') return;
+      if (!polygon || typeof polygon.getPath !== 'function') return;
 
       const path = polygon.getPath();
       const coords = [];

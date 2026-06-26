@@ -8,7 +8,8 @@ export function useGoogleMapsConfig() {
     useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const res = await api.get('/api/admin/integrations');
+                // Use relative path to avoid doubling /api
+                const res = await api.get('admin/integrations');
 
                 if (res.data?.success && Array.isArray(res.data.data)) {
                     const maps = res.data.data.find((i: any) => i.type === 'GOOGLE_MAPS');
