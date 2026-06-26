@@ -1,18 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api/axios';
+import { useAuthStore } from '@/lib/store/authStore';
 
 export function useGoogleMapsConfig() {
     const [config, setConfig] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const timerRef = useRef<any>(null);
+    const { token } = useAuthStore();
 
     useEffect(() => {
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 10;
 
         const fetchConfig = async () => {
+            // If we don't have a token yet and we're in the browser, wait a bit
+            const currentToken = token || localStorage.getItem('token');
+
+            if (!currentToken && attempts < maxAttempts) {
+                attempts++;
+                timerRef.current = setTimeout(fetchConfig, 1000);
+                return;
+            }
+
             try {
-                const res = await api.get('/api/admin/integrations');
+                // Force headers for this critical call if needed
+                const res = await api.get('/api/admin/integrations', {
+                    headers: currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {}
+                });
 
                 if (res.data?.success && Array.isArray(res.data.data)) {
                     const maps = res.data.data.find((i: any) => i.type === 'GOOGLE_MAPS');
@@ -26,7 +40,6 @@ export function useGoogleMapsConfig() {
                     }
                 }
 
-                // If we reach here, it wasn't successful or no key found
                 if (attempts < maxAttempts) {
                     attempts++;
                     timerRef.current = setTimeout(fetchConfig, 2000);
@@ -37,7 +50,6 @@ export function useGoogleMapsConfig() {
                 const status = e.response?.status;
                 if ((status === 401 || status === 403) && attempts < maxAttempts) {
                     attempts++;
-                    // Unauthorized - wait for rehydration/login and retry
                     timerRef.current = setTimeout(fetchConfig, 2000);
                 } else {
                     console.error('Final attempt failed to fetch Maps config', e);
@@ -51,7 +63,7 @@ export function useGoogleMapsConfig() {
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, []);
+    }, [token]);
 
     return { config, loading };
 }

@@ -54,7 +54,7 @@ export const LiveOpsMap: React.FC<LiveOpsMapProps> = ({ providers, activeJobs })
   }, [providers, activeJobs, providerFilter, customerFilter, showProviders, showCustomers]);
 
   const center = useMemo(() => {
-    if (filteredProviders.length > 0 && filteredProviders[0].location?.coordinates) {
+    if (filteredProviders.length > 0 && filteredProviders[0].location?.coordinates?.length === 2) {
         return {
             lat: filteredProviders[0].location.coordinates[1],
             lng: filteredProviders[0].location.coordinates[0]

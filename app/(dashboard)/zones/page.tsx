@@ -340,23 +340,26 @@ function ZoneManagementContent() {
                         zoomControl: true,
                     }}
                 >
-                    <DrawingManager
-                        onLoad={dm => drawingManagerRef.current = dm}
-                        onPolygonComplete={onPolygonComplete}
-                        drawingMode={drawingMode}
-                        options={{
-                            drawingControl: false,
-                            polygonOptions: {
-                                fillColor: '#3b82f6',
-                                fillOpacity: 0.3,
-                                strokeColor: '#3b82f6',
-                                strokeWeight: 2,
-                                clickable: false,
-                                editable: false,
-                                zIndex: 1
-                            }
-                        }}
-                    />
+                    {/* DRAWING MANAGER (Conditional to avoid crash if library fails to load) */}
+                    {typeof google !== 'undefined' && google.maps.drawing && (
+                        <DrawingManager
+                            onLoad={dm => drawingManagerRef.current = dm}
+                            onPolygonComplete={onPolygonComplete}
+                            drawingMode={drawingMode}
+                            options={{
+                                drawingControl: false,
+                                polygonOptions: {
+                                    fillColor: '#3b82f6',
+                                    fillOpacity: 0.3,
+                                    strokeColor: '#3b82f6',
+                                    strokeWeight: 2,
+                                    clickable: false,
+                                    editable: false,
+                                    zIndex: 1
+                                }
+                            }}
+                        />
+                    )}
 
                     {zones.map(zone => (
                         <Polygon
