@@ -28,7 +28,8 @@ export default function LoginPage() {
     try {
         const res = await api.post("/api/auth/login", {
             identifier: formData.email,
-            password: formData.password
+            password: formData.password,
+            appType: "ADMIN_PORTAL"
         });
 
         if (res.data.success) {
@@ -59,7 +60,8 @@ export default function LoginPage() {
             // In this specific implementation, we'll just re-call login to get the final token
             const loginRes = await api.post("/api/auth/login", {
                 identifier: formData.email,
-                password: formData.password
+                password: formData.password,
+                appType: "ADMIN_PORTAL"
             });
 
             if (loginRes.data.success) {
