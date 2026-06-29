@@ -79,10 +79,8 @@ export default function CommunicationsHub() {
         }
 
         const res = await api.get(`${endpoint}?${params.toString()}`);
-        if (activeTab === "CHATS") setData(res.data.chats || []);
-        else if (activeTab === "CALLS") setData(res.data.calls || []);
-        else if (activeTab === "RATINGS") setData(res.data.reviews || []);
-        else if (activeTab === "DISPUTES") setData(res.data.disputes || []);
+        const resultData = res.data.data || [];
+        setData(resultData);
     } catch (e) {
         console.error('Failed to load communication data');
     } finally {
