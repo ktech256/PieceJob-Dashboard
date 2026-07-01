@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import api from '@/lib/api/axios';
 import { useCountryStore } from '@/lib/store/countryStore';
+import { useSearchParams } from 'next/navigation';
 import {
   Megaphone,
   Plus,
@@ -18,17 +19,31 @@ import {
   Users,
   Target,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Gift
 } from 'lucide-react';
 
 export default function MarketingPage() {
+    return (
+        <Suspense fallback={<div>Loading Marketing Hub...</div>}>
+            <MarketingContent />
+        </Suspense>
+    );
+}
+
+function MarketingContent() {
   const { countryCode } = useCountryStore();
+  const searchParams = useSearchParams();
   const [promotions, setPromotions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('promotions'); // 'promotions' or 'notifications'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'promotions');
 
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [editingPromo, setEditingPromo] = useState<any>(null);
+
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [editingReferral, setEditingReferral] = useState<any>(null);
 
   const loadPromotions = async () => {
     setLoading(true);
@@ -42,18 +57,42 @@ export default function MarketingPage() {
     }
   };
 
-  useEffect(() => {
-    loadPromotions();
-  }, [countryCode]);
+  const loadReferrals = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/api/v1/marketing/referrals');
+      setReferrals(res.data.data);
+    } catch (e) {
+      console.error('Failed to load referrals');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleDelete = async (id: string) => {
+  useEffect(() => {
+    if (activeTab === 'promotions') loadPromotions();
+    if (activeTab === 'referrals') loadReferrals();
+  }, [countryCode, activeTab]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  const handleDeleteReferral = async (id: string) => {
+    if (!confirm('Destroy this referral campaign?')) return;
+    await api.delete(`/api/v1/marketing/referrals/${id}`);
+    loadReferrals();
+  };
+
+  const handleDeletePromo = async (id: string) => {
     if (!confirm('Destroy this promotion?')) return;
     await api.delete(`/api/v1/marketing/promotions/${id}`);
     loadPromotions();
   };
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-8 pb-20 text-neutral-900">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black uppercase tracking-tight">Growth & Marketing</h2>
@@ -67,6 +106,12 @@ export default function MarketingPage() {
             Promotions
           </button>
           <button
+            onClick={() => setActiveTab('referrals')}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'referrals' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
+          >
+            Invite & Earn
+          </button>
+          <button
             onClick={() => setActiveTab('notifications')}
             className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'notifications' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
           >
@@ -75,7 +120,7 @@ export default function MarketingPage() {
         </div>
       </div>
 
-      {activeTab === 'promotions' ? (
+      {activeTab === 'promotions' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center bg-white p-6 rounded-[24px] border border-neutral-200 shadow-sm">
              <div className="flex items-center gap-4">
@@ -104,7 +149,7 @@ export default function MarketingPage() {
                   )}
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button onClick={() => { setEditingPromo(promo); setShowPromoModal(true); }} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-neutral-600 hover:text-neutral-900 transition-colors"><Edit size={14} /></button>
-                    <button onClick={() => handleDelete(promo._id)} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-red-500 hover:text-red-700 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => handleDeletePromo(promo._id)} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-red-500 hover:text-red-700 transition-colors"><Trash2 size={14} /></button>
                   </div>
                   <div className="absolute bottom-4 left-4">
                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${promo.isActive ? 'bg-green-500 text-white' : 'bg-neutral-500 text-white'}`}>
@@ -132,7 +177,50 @@ export default function MarketingPage() {
             ))}
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'referrals' && (
+        <div className="space-y-6">
+           <div className="flex justify-between items-center bg-white p-6 rounded-[24px] border border-neutral-200 shadow-sm">
+             <div className="flex items-center gap-4">
+                <div className="p-3 bg-yellow-50 text-yellow-600 rounded-xl"><Gift size={20} /></div>
+                <div>
+                   <p className="text-xs font-black uppercase">Invite & Earn Campaigns</p>
+                   <p className="text-[10px] text-neutral-400 font-bold uppercase">Active: {referrals.filter(r => r.isActive).length}</p>
+                </div>
+             </div>
+             <button
+                onClick={() => { setEditingReferral(null); setShowReferralModal(true); }}
+                className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all"
+             >
+                <Plus size={14} /> New Campaign
+             </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {referrals.map((ref) => (
+              <div key={ref._id} className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm flex justify-between items-center group">
+                 <div className="flex gap-6 items-center">
+                    <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center text-neutral-300">
+                       <Gift size={32} />
+                    </div>
+                    <div>
+                       <h3 className="text-sm font-black uppercase">{ref.title}</h3>
+                       <p className="text-[10px] text-neutral-400 font-bold uppercase">{ref.rewardAmount} {ref.currency} Reward</p>
+                       <p className="text-[9px] text-neutral-300 font-bold mt-1 uppercase">Ends: {new Date(ref.endDate).toLocaleDateString()}</p>
+                    </div>
+                 </div>
+                 <div className="flex gap-2">
+                    <button onClick={() => { setEditingReferral(ref); setShowReferralModal(true); }} className="p-3 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
+                    <button onClick={() => handleDeleteReferral(ref._id)} className="p-3 bg-neutral-50 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 size={16} /></button>
+                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'notifications' && (
         <PushNotificationComposer />
       )}
 
@@ -143,6 +231,128 @@ export default function MarketingPage() {
           onSave={() => { setShowPromoModal(false); loadPromotions(); }}
         />
       )}
+
+      {showReferralModal && (
+        <ReferralModal
+          campaign={editingReferral}
+          onClose={() => setShowReferralModal(false)}
+          onSave={() => { setShowReferralModal(false); loadReferrals(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ReferralModal({ campaign, onClose, onSave }: any) {
+  const [form, setForm] = useState(campaign || {
+    title: '',
+    description: '',
+    rewardAmount: 0,
+    currency: 'USD',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    isActive: true
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (campaign) {
+        await api.patch(`/api/v1/marketing/referrals/${campaign._id}`, form);
+      } else {
+        await api.post('/api/v1/marketing/referrals', form);
+      }
+      onSave();
+    } catch (e) {
+      alert('Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
+      <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tight">{campaign ? 'Update' : 'Initialize'} Referral Campaign</h3>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
+        </div>
+
+        <div className="p-10 grid grid-cols-2 gap-6">
+          <div className="col-span-2">
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Campaign Title</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={e => setForm({...form, title: e.target.value})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Short Description</label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm({...form, description: e.target.value})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Reward Amount</label>
+            <input
+              type="number"
+              value={form.rewardAmount}
+              onChange={e => setForm({...form, rewardAmount: parseFloat(e.target.value)})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Currency</label>
+            <input
+              type="text"
+              value={form.currency}
+              onChange={e => setForm({...form, currency: e.target.value})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Start Date</label>
+            <input
+              type="date"
+              value={form.startDate.split('T')[0]}
+              onChange={e => setForm({...form, startDate: e.target.value})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">End Date</label>
+            <input
+              type="date"
+              value={form.endDate.split('T')[0]}
+              onChange={e => setForm({...form, endDate: e.target.value})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
+          <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all">Abort</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all disabled:opacity-50"
+          >
+            {saving ? 'Persisting...' : 'Activate Campaign'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -174,7 +384,7 @@ function PushNotificationComposer() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-neutral-900">
        <div className="bg-white border border-neutral-200 rounded-[40px] p-12 shadow-xl space-y-8">
           <div className="flex items-center gap-4 mb-8">
             <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Bell size={32} /></div>
@@ -300,7 +510,7 @@ function PromoModal({ promo, onClose, onSave }: any) {
   };
 
   return (
-    <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
+    <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
       <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div>
@@ -397,16 +607,5 @@ function PromoModal({ promo, onClose, onSave }: any) {
         </div>
       </div>
     </div>
-  );
-}
-
-function TabSmall({ label, active, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${active ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-200' : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100'}`}
-    >
-      {label}
-    </button>
   );
 }
