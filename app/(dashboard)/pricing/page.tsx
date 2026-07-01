@@ -121,11 +121,9 @@ function CountryPricingSettings({ settings, onSave }: { settings: any, onSave: (
                 <div className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm">
                     <h3 className="font-black text-lg uppercase tracking-tight mb-8 flex items-center gap-2">
                         <Settings2 className="text-neutral-500" />
-                        Currency & Taxation
+                        Taxation Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputGroup label="Currency Code" name="currencyCode" value={formData.currencyCode} onChange={handleChange} placeholder="ZAR, BWP..." />
-                        <InputGroup label="Currency Symbol" name="currencySymbol" value={formData.currencySymbol} onChange={handleChange} placeholder="R, P..." />
                         <InputGroup label="Tax Name" name="taxName" value={formData.taxName} onChange={handleChange} placeholder="VAT, GST..." />
                         <InputGroup label="Tax Percentage" name="taxPercentage" value={formData.taxPercentage} onChange={handleChange} suffix="%" />
                         <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
