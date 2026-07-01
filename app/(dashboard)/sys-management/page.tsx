@@ -21,7 +21,6 @@ import {
 
 export default function SystemManagement() {
   const [activeTab, setActiveTab] = useState("workspaces");
-  const { countryCode } = useCountryStore();
 
   return (
     <div className="space-y-8">
@@ -46,6 +45,7 @@ function WorkspaceManager() {
     const [workspaces, setWorkspaces] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
 
     const loadWorkspaces = async () => {
         setLoading(true);
@@ -61,16 +61,21 @@ function WorkspaceManager() {
 
     useEffect(() => { loadWorkspaces(); }, []);
 
-    const handleCreate = async (e: any) => {
+    const handleSubmit = async (e: any) => {
         e.preventDefault();
         const data = new FormData(e.target);
         const obj = Object.fromEntries(data.entries());
         try {
-            await api.post('/api/admin/countries', obj);
+            if (editingWorkspace) {
+                await api.patch(`/api/admin/countries/${editingWorkspace._id}`, obj);
+            } else {
+                await api.post('/api/admin/countries', obj);
+            }
             setShowForm(false);
+            setEditingWorkspace(null);
             loadWorkspaces();
         } catch (e) {
-            alert('Creation failed');
+            alert('Operation failed');
         }
     };
 
@@ -86,18 +91,28 @@ function WorkspaceManager() {
                             <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${w.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{w.isActive ? 'Active' : 'Suspended'}</span>
                         </div>
                         <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tight">{w.name}</h3>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">ISO: {w.code} | {w.currency} | {w.timezone}</p>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">ISO: {w.code} | {w.currency} ({w.currencySymbol}) | {w.timezone}</p>
 
                         <div className="mt-8 pt-6 border-t border-neutral-50 flex justify-between items-center">
-                            <button className="text-[10px] font-black uppercase text-neutral-400 hover:text-neutral-900 transition-all">Edit Config</button>
+                            <button
+                                onClick={() => { setEditingWorkspace(w); setShowForm(true); }}
+                                className="text-[10px] font-black uppercase text-neutral-400 hover:text-neutral-900 transition-all"
+                            >
+                                Edit Config
+                            </button>
                             <div className="flex gap-2">
-                                <button className="p-2 bg-neutral-50 rounded-xl text-neutral-400 hover:text-brand-customer-red transition-all"><Edit size={14} /></button>
+                                <button
+                                    onClick={() => { setEditingWorkspace(w); setShowForm(true); }}
+                                    className="p-2 bg-neutral-50 rounded-xl text-neutral-400 hover:text-brand-customer-red transition-all"
+                                >
+                                    <Edit size={14} />
+                                </button>
                             </div>
                         </div>
                     </div>
                 ))}
                 <button
-                    onClick={() => setShowForm(true)}
+                    onClick={() => { setEditingWorkspace(null); setShowForm(true); }}
                     className="bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-[32px] p-8 flex flex-col items-center justify-center gap-4 text-neutral-400 hover:text-neutral-900 hover:border-neutral-900 transition-all min-h-[250px]"
                 >
                     <Plus size={32} />
@@ -107,25 +122,27 @@ function WorkspaceManager() {
 
             {showForm && (
                 <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-10 border-b bg-neutral-50/50 flex justify-between items-center">
                             <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tight">Deploy Country Node</h3>
+                                <h3 className="text-2xl font-black uppercase tracking-tight">{editingWorkspace ? 'Update' : 'Deploy'} Country Node</h3>
                                 <p className="text-[10px] font-black text-neutral-400 uppercase mt-1">Authorized Super-Admin Provisioning Only</p>
                             </div>
                             <button onClick={() => setShowForm(false)} className="p-3 hover:bg-white rounded-2xl transition-all shadow-sm"><X size={24} className="text-neutral-300" /></button>
                         </div>
-                        <form onSubmit={handleCreate} className="p-10 space-y-6">
+                        <form onSubmit={handleSubmit} className="p-10 space-y-6">
                             <div className="grid grid-cols-2 gap-6">
-                                <Input label="Country Name" name="name" placeholder="e.g. South Africa" required />
-                                <Input label="ISO Code" name="code" placeholder="e.g. ZA" required />
-                                <Input label="Currency" name="currency" placeholder="e.g. ZAR" required />
-                                <Input label="Timezone" name="timezone" placeholder="e.g. Africa/Johannesburg" required />
-                                <Input label="Language" name="language" placeholder="en" />
-                                <Input label="Locale" name="locale" placeholder="en-ZA" />
+                                <Input label="Country Name" name="name" defaultValue={editingWorkspace?.name} placeholder="e.g. South Africa" required />
+                                <Input label="ISO Code" name="code" defaultValue={editingWorkspace?.code} placeholder="e.g. ZA" required />
+                                <Input label="Currency Code" name="currency" defaultValue={editingWorkspace?.currency} placeholder="e.g. ZAR" required />
+                                <Input label="Currency Symbol" name="currencySymbol" defaultValue={editingWorkspace?.currencySymbol} placeholder="e.g. R" required />
+                                <Input label="Timezone" name="timezone" defaultValue={editingWorkspace?.timezone} placeholder="e.g. Africa/Johannesburg" required />
+                                <Input label="Flag Emoji" name="flagEmoji" defaultValue={editingWorkspace?.flagEmoji} placeholder="🇿🇦" />
+                                <Input label="Language" name="language" defaultValue={editingWorkspace?.language || 'en'} placeholder="en" />
+                                <Input label="Locale" name="locale" defaultValue={editingWorkspace?.locale || 'en-ZA'} placeholder="en-ZA" />
                             </div>
                             <button type="submit" className="w-full bg-neutral-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-all">
-                                Provision Workspace
+                                {editingWorkspace ? 'Update Workspace' : 'Provision Workspace'}
                             </button>
                             <button type="button" onClick={() => setShowForm(false)} className="w-full text-neutral-400 font-black uppercase text-[10px] tracking-widest hover:text-neutral-900">Cancel Deployment</button>
                         </form>
