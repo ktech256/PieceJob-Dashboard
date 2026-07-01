@@ -112,7 +112,6 @@ function LedgerConsole({ currency }: { currency: string }) {
     const { countryCode } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-...
 
     const loadLedger = async () => {
         setLoading(true);
@@ -191,7 +190,6 @@ function LedgerConsole({ currency }: { currency: string }) {
 function PayoutEngine({ currency }: { currency: string }) {
     const { countryCode } = useCountryStore();
     const [payouts, setPayouts] = useState<any[]>([]);
-...
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
