@@ -23,13 +23,14 @@ import {
 
 export default function FinanceHub() {
   const [activeTab, setActiveTab] = useState("ledger");
-  const { countryCode } = useCountryStore();
+  const { countryCode, currentCountry } = useCountryStore();
 
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingPayouts: 0,
     activeEscrow: 0,
-    mismatchErrors: 0
+    mismatchErrors: 0,
+    currency: '$'
   });
 
   const [loading, setLoading] = useState(true);
@@ -38,7 +39,7 @@ export default function FinanceHub() {
       setLoading(true);
       try {
           const res = await api.get(`/api/admin/finance/overview?countryCode=${countryCode}`);
-          setStats(res.data.stats);
+          setStats({ ...res.data.stats, currency: res.data.stats.currency || currentCountry?.currency || '$' });
       } catch (e) {
           console.error('Failed to load finance stats');
       } finally {
@@ -70,21 +71,21 @@ export default function FinanceHub() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <FinanceCard
             label="Total Platform Revenue"
-            value={`$${stats.totalRevenue.toLocaleString()}`}
+            value={`${stats.currency} ${stats.totalRevenue.toLocaleString()}`}
             icon={<ArrowUpRight size={18} className="text-green-600" />}
             status="CLEARED"
             sub="Ledger balanced"
         />
         <FinanceCard
             label="Withdrawable (Pending)"
-            value={`$${stats.pendingPayouts.toLocaleString()}`}
+            value={`${stats.currency} ${stats.pendingPayouts.toLocaleString()}`}
             icon={<Clock size={18} className="text-blue-600" />}
             status="PROCESSING"
             sub="Providers queued"
         />
         <FinanceCard
             label="Total in Escrow"
-            value={`$${stats.activeEscrow.toLocaleString()}`}
+            value={`${stats.currency} ${stats.activeEscrow.toLocaleString()}`}
             icon={<ShieldCheck size={18} className="text-brand-provider-green" />}
             status="LOCKED"
             sub="Escrow cooling active"
@@ -98,19 +99,20 @@ export default function FinanceHub() {
         />
       </div>
 
-      {activeTab === "ledger" && <LedgerConsole />}
-      {activeTab === "payouts" && <PayoutEngine />}
-      {activeTab === "invoices" && <InvoiceControl />}
+      {activeTab === "ledger" && <LedgerConsole currency={stats.currency} />}
+      {activeTab === "payouts" && <PayoutEngine currency={stats.currency} />}
+      {activeTab === "invoices" && <InvoiceControl currency={stats.currency} />}
       {activeTab === "reconciliation" && <ReconciliationHub onRefresh={fetchOverview} />}
       {activeTab === "statements" && <StatementsHub />}
     </div>
   );
 }
 
-function LedgerConsole() {
+function LedgerConsole({ currency }: { currency: string }) {
     const { countryCode } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+...
 
     const loadLedger = async () => {
         setLoading(true);
@@ -186,9 +188,10 @@ function LedgerConsole() {
     )
 }
 
-function PayoutEngine() {
+function PayoutEngine({ currency }: { currency: string }) {
     const { countryCode } = useCountryStore();
     const [payouts, setPayouts] = useState<any[]>([]);
+...
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -341,7 +344,7 @@ function PayoutEngine() {
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <p className="text-xs font-bold">Min Withdrawal Threshold</p>
-                            <p className="font-black text-brand-provider-green">$50.00</p>
+                            <p className="font-black text-brand-provider-green">{currency} 50.00</p>
                         </div>
                         <div className="flex justify-between items-center">
                             <p className="text-xs font-bold">Auto-Settlement</p>
@@ -369,7 +372,7 @@ function PayoutEngine() {
     )
 }
 
-function InvoiceControl() {
+function InvoiceControl({ currency }: { currency: string }) {
     const { countryCode } = useCountryStore();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
