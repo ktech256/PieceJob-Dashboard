@@ -48,7 +48,7 @@ function MarketingContent() {
   const loadPromotions = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/v1/marketing/promotions');
+      const res = await api.get(`/api/v1/marketing/promotions?countryCode=${countryCode}`);
       setPromotions(res.data.data);
     } catch (e) {
       console.error('Failed to load promotions');
@@ -60,7 +60,7 @@ function MarketingContent() {
   const loadReferrals = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/v1/marketing/referrals');
+      const res = await api.get(`/api/v1/marketing/referrals?countryCode=${countryCode}`);
       setReferrals(res.data.data);
     } catch (e) {
       console.error('Failed to load referrals');
@@ -81,14 +81,22 @@ function MarketingContent() {
 
   const handleDeleteReferral = async (id: string) => {
     if (!confirm('Destroy this referral campaign?')) return;
-    await api.delete(`/api/v1/marketing/referrals/${id}`);
-    loadReferrals();
+    try {
+        await api.delete(`/api/v1/marketing/referrals/${id}`);
+        loadReferrals();
+    } catch (e) {
+        alert('Failed to delete campaign');
+    }
   };
 
   const handleDeletePromo = async (id: string) => {
     if (!confirm('Destroy this promotion?')) return;
-    await api.delete(`/api/v1/marketing/promotions/${id}`);
-    loadPromotions();
+    try {
+        await api.delete(`/api/v1/marketing/promotions/${id}`);
+        loadPromotions();
+    } catch (e) {
+        alert('Failed to delete promotion');
+    }
   };
 
   return (
@@ -96,7 +104,7 @@ function MarketingContent() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black uppercase tracking-tight">Growth & Marketing</h2>
-          <p className="text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Acquisition, Retention & Engagement Control</p>
+          <p className="text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Acquisition, Retention & Engagement Control — {countryCode}</p>
         </div>
         <div className="flex gap-4">
           <button
@@ -127,12 +135,13 @@ function MarketingContent() {
                 <div className="p-3 bg-brand-customer-red/10 text-brand-customer-red rounded-xl"><Megaphone size={20} /></div>
                 <div>
                    <p className="text-xs font-black uppercase">Dashboard Banners</p>
-                   <p className="text-[10px] text-neutral-400 font-bold uppercase">Active: {promotions.filter(p => p.isActive).length}</p>
+                   <p className="text-[10px] text-neutral-400 font-bold uppercase">Active in {countryCode}: {promotions.filter(p => p.isActive).length}</p>
                 </div>
              </div>
              <button
+                disabled={countryCode === 'GLOBAL'}
                 onClick={() => { setEditingPromo(null); setShowPromoModal(true); }}
-                className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all"
+                className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all disabled:opacity-50"
              >
                 <Plus size={14} /> Create Promotion
              </button>
@@ -164,8 +173,8 @@ function MarketingContent() {
                   </div>
                   <div className="flex justify-between items-center pt-4 border-t border-neutral-50">
                      <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Visibility</span>
-                        <span className="text-[10px] font-bold text-neutral-800">{promo.targetRole}</span>
+                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Workspace</span>
+                        <span className="text-[10px] font-bold text-neutral-800 uppercase">{promo.countryCode || 'GLOBAL'}</span>
                      </div>
                      <div className="flex flex-col text-right">
                         <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Priority</span>
@@ -186,12 +195,13 @@ function MarketingContent() {
                 <div className="p-3 bg-yellow-50 text-yellow-600 rounded-xl"><Gift size={20} /></div>
                 <div>
                    <p className="text-xs font-black uppercase">Invite & Earn Campaigns</p>
-                   <p className="text-[10px] text-neutral-400 font-bold uppercase">Active: {referrals.filter(r => r.isActive).length}</p>
+                   <p className="text-[10px] text-neutral-400 font-bold uppercase">Active in {countryCode}: {referrals.filter(r => r.isActive).length}</p>
                 </div>
              </div>
              <button
+                disabled={countryCode === 'GLOBAL'}
                 onClick={() => { setEditingReferral(null); setShowReferralModal(true); }}
-                className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all"
+                className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all disabled:opacity-50"
              >
                 <Plus size={14} /> New Campaign
              </button>
@@ -221,12 +231,13 @@ function MarketingContent() {
       )}
 
       {activeTab === 'notifications' && (
-        <PushNotificationComposer />
+        <PushNotificationComposer workspaceCode={countryCode} />
       )}
 
       {showPromoModal && (
         <PromoModal
           promo={editingPromo}
+          workspaceCode={countryCode}
           onClose={() => setShowPromoModal(false)}
           onSave={() => { setShowPromoModal(false); loadPromotions(); }}
         />
@@ -235,6 +246,7 @@ function MarketingContent() {
       {showReferralModal && (
         <ReferralModal
           campaign={editingReferral}
+          workspaceCode={countryCode}
           onClose={() => setShowReferralModal(false)}
           onSave={() => { setShowReferralModal(false); loadReferrals(); }}
         />
@@ -243,19 +255,24 @@ function MarketingContent() {
   );
 }
 
-function ReferralModal({ campaign, onClose, onSave }: any) {
+function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
   const [form, setForm] = useState(campaign || {
     title: '',
     description: '',
     rewardAmount: 0,
-    currency: 'USD',
+    currency: 'R',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    isActive: true
+    isActive: true,
+    countryCode: workspaceCode
   });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    if (form.countryCode === 'GLOBAL') {
+        alert('Campaigns must be assigned to a specific workspace.');
+        return;
+    }
     setSaving(true);
     try {
       if (campaign) {
@@ -277,6 +294,7 @@ function ReferralModal({ campaign, onClose, onSave }: any) {
         <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight">{campaign ? 'Update' : 'Initialize'} Referral Campaign</h3>
+            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Workspace Target: {form.countryCode}</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
         </div>
@@ -357,19 +375,28 @@ function ReferralModal({ campaign, onClose, onSave }: any) {
   );
 }
 
-function PushNotificationComposer() {
+function PushNotificationComposer({ workspaceCode }: { workspaceCode: string }) {
   const [form, setForm] = useState({
     target: 'ALL',
     title: '',
     body: '',
     imageUrl: '',
     deepLink: '',
-    countryCode: 'ZA'
+    countryCode: workspaceCode
   });
+
+  useEffect(() => {
+    setForm(f => ({ ...f, countryCode: workspaceCode }));
+  }, [workspaceCode]);
+
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleSend = async () => {
+    if (form.countryCode === 'GLOBAL') {
+        alert('You must select a specific workspace to send notifications.');
+        return;
+    }
     if (!form.title || !form.body) return alert('Title and Message required.');
     setSending(true);
     try {
@@ -390,7 +417,7 @@ function PushNotificationComposer() {
             <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Bell size={32} /></div>
             <div>
               <h3 className="text-2xl font-black uppercase tracking-tighter">Global Push Oracle</h3>
-              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Immediate Fire Dispatch System</p>
+              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Workspace: {workspaceCode}</p>
             </div>
           </div>
 
@@ -403,7 +430,7 @@ function PushNotificationComposer() {
                       onChange={e => setForm({...form, target: e.target.value})}
                       className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
                    >
-                      <option value="ALL">Everyone</option>
+                      <option value="ALL">Everyone in {workspaceCode}</option>
                       <option value="CUSTOMERS">Customers Only</option>
                       <option value="PROVIDERS">Providers Only</option>
                    </select>
@@ -461,15 +488,15 @@ function PushNotificationComposer() {
              {success ? (
                <div className="bg-green-50 text-green-600 p-6 rounded-2xl flex items-center justify-center gap-3 animate-bounce">
                   <CheckCircle size={20} />
-                  <span className="font-black uppercase text-xs">Oracle has successfully dispatched the signal.</span>
+                  <span className="font-black uppercase text-xs">Oracle has successfully dispatched the signal to {workspaceCode}.</span>
                </div>
              ) : (
                <button
                   onClick={handleSend}
-                  disabled={sending}
+                  disabled={sending || workspaceCode === 'GLOBAL'}
                   className="w-full bg-neutral-900 text-white h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 hover:bg-black transition-all shadow-2xl shadow-neutral-200 disabled:opacity-50"
                >
-                  {sending ? 'Dispatching...' : <><Send size={18} /> Execute Global Blast</>}
+                  {sending ? 'Dispatching...' : <><Send size={18} /> Execute {workspaceCode} Blast</>}
                </button>
              )}
           </div>
@@ -478,7 +505,7 @@ function PushNotificationComposer() {
   );
 }
 
-function PromoModal({ promo, onClose, onSave }: any) {
+function PromoModal({ promo, workspaceCode, onClose, onSave }: any) {
   const [form, setForm] = useState(promo || {
     title: '',
     description: '',
@@ -489,7 +516,8 @@ function PromoModal({ promo, onClose, onSave }: any) {
     endDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
     priority: 0,
     targetRole: 'ALL',
-    isActive: true
+    isActive: true,
+    countryCode: workspaceCode
   });
   const [saving, setSaving] = useState(false);
 
@@ -515,7 +543,7 @@ function PromoModal({ promo, onClose, onSave }: any) {
         <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight">{promo ? 'Update' : 'Initialize'} Promotion</h3>
-            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Marketing Entity Calibration</p>
+            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Workspace: {form.countryCode}</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
         </div>
