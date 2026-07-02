@@ -94,7 +94,10 @@ export default function JobsMonitoring() {
                       {filteredJobs.map(job => (
                           <tr key={job._id} className="hover:bg-neutral-50/50 transition-all">
                               <td className="px-8 py-5 font-mono text-xs text-neutral-400">#{job._id.slice(-6).toUpperCase()}</td>
-                              <td className="px-8 py-5 text-neutral-900">{job.serviceCode}</td>
+                              <td className="px-8 py-5 text-neutral-900">
+                                  <div className="font-bold">{job.serviceName || 'Unknown Service'}</div>
+                                  <div className="text-[10px] text-neutral-400 font-mono">{job.serviceCode}</div>
+                              </td>
                               <td className="px-8 py-5">
                                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${getStatusColor(job.status)}`}>
                                       {job.status.replace('_', ' ')}
