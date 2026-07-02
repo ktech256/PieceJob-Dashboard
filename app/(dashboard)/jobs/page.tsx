@@ -29,6 +29,13 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { io } from 'socket.io-client';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+
+const mapContainerStyle = {
+    width: '100%',
+    height: '200px',
+    borderRadius: '24px'
+};
 
 export default function JobsMonitoring() {
   const { countryCode, currentCountry } = useCountryStore();
@@ -106,7 +113,13 @@ export default function JobsMonitoring() {
 
   const filteredJobs = jobs.filter(j => activeFilter === 'ALL' || j.status === activeFilter);
 
-  const getCurrency = (job: any) => job.pricingSnapshot?.currencyCode || currentCountry?.currency || 'USD';
+  const getCurrency = (job: any) => {
+    if (job.pricingSnapshot?.currencyCode) return job.pricingSnapshot.currencyCode;
+    // If the country store has a currency symbol (like 'R'), we try to use it,
+    // but Intl.NumberFormat expects a 3-letter code (ZAR) for 'currency' style.
+    // Our formatCurrency handles this fallback.
+    return currentCountry?.currency || 'USD';
+  };
 
   return (
     <div className="space-y-8">
@@ -371,17 +384,27 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                             <DetailCard title="Geospatial Data" icon={<MapPin size={18} />}>
                                 <div className="space-y-6">
                                     <div>
-                                        <p className="text-[10px] font-black uppercase text-neutral-400 mb-1">Destination Address</p>
-                                        <p className="text-sm font-bold leading-relaxed">{job.location?.address}</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase text-neutral-400 mb-1">Latitude</p>
-                                            <p className="font-mono text-xs font-bold">{job.location?.coordinates[1]}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase text-neutral-400 mb-1">Longitude</p>
-                                            <p className="font-mono text-xs font-bold">{job.location?.coordinates[0]}</p>
+                                        <p className="text-[10px] font-black uppercase text-neutral-400 mb-2">Location Mapping</p>
+                                        <div className="p-4 bg-neutral-900 rounded-2xl text-white mb-4">
+                                            <p className="text-xs font-bold leading-relaxed mb-4">{job.location?.address}</p>
+                                            <div className="flex gap-4 mb-4">
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-neutral-500">Lat</p>
+                                                    <p className="font-mono text-xs">{job.location?.coordinates[1]}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-neutral-500">Lng</p>
+                                                    <p className="font-mono text-xs">{job.location?.coordinates[0]}</p>
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${job.location?.coordinates[1]},${job.location?.coordinates[0]}`}
+                                                target="_blank"
+                                                className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase transition-all"
+                                            >
+                                                <MapPin size={12} />
+                                                View on Maps
+                                            </a>
                                         </div>
                                     </div>
                                     {job.distanceTravelled > 0 && (
@@ -430,6 +453,35 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
 
                         {/* Right Column: Comms & Overrides */}
                         <div className="space-y-8">
+                            {['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'STARTED'].includes(job.status) && providerProfile?.location && (
+                                <DetailCard title="Live Tracking" icon={<MapPin size={18} className="text-emerald-500 animate-pulse" />}>
+                                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 mb-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-[10px] font-black uppercase text-emerald-600">Provider Live GPS</span>
+                                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <p className="text-[8px] font-black uppercase text-neutral-400">Lat</p>
+                                                <p className="font-mono text-xs font-bold">{providerProfile.location.coordinates[1]}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-black uppercase text-neutral-400">Lng</p>
+                                                <p className="font-mono text-xs font-bold">{providerProfile.location.coordinates[0]}</p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${providerProfile.location.coordinates[1]},${providerProfile.location.coordinates[0]}`}
+                                            target="_blank"
+                                            className="w-full py-2 bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase transition-all hover:bg-emerald-700"
+                                        >
+                                            <ExternalLink size={12} />
+                                            Intercept Provider
+                                        </a>
+                                    </div>
+                                </DetailCard>
+                            )}
+
                             <DetailCard title="Communication Audit" icon={<Phone size={18} />}>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-4 bg-white rounded-2xl border border-neutral-100 text-center">

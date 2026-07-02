@@ -6,10 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency: string, locale: string = "en-US") {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currency || "USD",
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: currency.length === 3 ? currency : "USD",
+    }).format(amount);
+  } catch (e) {
+    // Fallback for non-standard currency codes/symbols
+    return `${currency} ${amount.toFixed(2)}`;
+  }
 }
 
 export function formatDateTime(date: string | Date, timezone: string = "UTC", locale: string = "en-US") {

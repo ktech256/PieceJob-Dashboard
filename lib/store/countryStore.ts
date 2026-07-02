@@ -5,6 +5,7 @@ export interface Country {
   code: string;
   name: string;
   currency: string;
+  currencySymbol: string;
   timezone: string;
   language: string;
   locale: string;
