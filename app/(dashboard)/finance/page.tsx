@@ -36,16 +36,49 @@ import {
   ShieldAlert
 } from 'lucide-react';
 
-const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const formatDate = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) {
+        return "Error";
+    }
 };
 
-const formatTime = (date: string | Date) => {
-    return new Date(date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const formatTime = (date: string | Date | undefined) => {
+    if (!date) return "--:--";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "--:--";
+        return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+        return "Error";
+    }
 };
 
-const formatDateTimeLong = (date: string | Date) => {
-    return new Date(date).toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const formatDateTimeLong = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return d.toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+        return "Error";
+    }
+};
+
+const renderActor = (actor: any) => {
+    if (!actor) return 'SYSTEM';
+    if (typeof actor === 'string') return actor;
+    if (typeof actor !== 'object') return String(actor);
+
+    // Defensive check to avoid rendering the whole object
+    const name = actor.firstName ? `${actor.firstName} ${actor.lastName || ''}`.trim() : null;
+    const identifier = name || actor.email || actor.auditId || actor._id?.toString() || 'CORE_ENGINE';
+
+    return String(identifier);
 };
 
 export default function FinanceControlCentre() {
@@ -71,7 +104,12 @@ export default function FinanceControlCentre() {
     setLoading(true);
     try {
       const res = await api.get(`/api/admin/finance/overview?countryCode=${countryCode}`);
-      setStats(res.data.stats);
+      if (res.data && res.data.stats) {
+          setStats({
+              ...stats, // Keep defaults if any field missing
+              ...res.data.stats
+          });
+      }
     } catch (e) {
       console.error('Failed to load finance overview');
     } finally {
@@ -122,16 +160,16 @@ export default function FinanceControlCentre() {
       {activeTab === "overview" && (
         <div className="space-y-8 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FinanceCard label="Customer Wallets" value={stats.totalCustomerWallets.toString()} sub="Total Active" color="blue" />
-            <FinanceCard label="Provider Wallets" value={stats.totalProviderWallets.toString()} sub="Total Active" color="green" />
-            <FinanceCard label="Total Platform Revenue" value={`${stats.currencySymbol}${stats.totalRevenue.toLocaleString()}`} sub="Gross Volume" color="emerald" />
-            <FinanceCard label="Net Commission" value={`${stats.currencySymbol}${stats.netCommission.toLocaleString()}`} sub="Earned Profit" color="indigo" />
+            <FinanceCard label="Customer Wallets" value={(stats.totalCustomerWallets || 0).toString()} sub="Total Active" color="blue" />
+            <FinanceCard label="Provider Wallets" value={(stats.totalProviderWallets || 0).toString()} sub="Total Active" color="green" />
+            <FinanceCard label="Total Platform Revenue" value={`${stats.currencySymbol || ''}${(stats.totalRevenue || 0).toLocaleString()}`} sub="Gross Volume" color="emerald" />
+            <FinanceCard label="Net Commission" value={`${stats.currencySymbol || ''}${(stats.netCommission || 0).toLocaleString()}`} sub="Earned Profit" color="indigo" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FinanceCard label="Total in Escrow" value={`${stats.currencySymbol}${stats.activeEscrow.toLocaleString()}`} sub="Held Funds" color="amber" />
-            <FinanceCard label="Pending Withdrawals" value={`${stats.currencySymbol}${stats.pendingPayouts.toLocaleString()}`} sub="Awaiting Action" color="orange" />
-            <FinanceCard label="Pending Refunds" value={`${stats.currencySymbol}${stats.pendingRefunds.toLocaleString()}`} sub="Customer Requests" color="red" />
-            <FinanceCard label="Referral & Bonus" value={`${stats.currencySymbol}${stats.totalBonuses.toLocaleString()}`} sub="Marketing Liability" color="purple" />
+            <FinanceCard label="Total in Escrow" value={`${stats.currencySymbol || ''}${(stats.activeEscrow || 0).toLocaleString()}`} sub="Held Funds" color="amber" />
+            <FinanceCard label="Pending Withdrawals" value={`${stats.currencySymbol || ''}${(stats.pendingPayouts || 0).toLocaleString()}`} sub="Awaiting Action" color="orange" />
+            <FinanceCard label="Pending Refunds" value={`${stats.currencySymbol || ''}${(stats.pendingRefunds || 0).toLocaleString()}`} sub="Customer Requests" color="red" />
+            <FinanceCard label="Referral & Bonus" value={`${stats.currencySymbol || ''}${(stats.totalBonuses || 0).toLocaleString()}`} sub="Marketing Liability" color="purple" />
           </div>
           <ReconciliationHub onRefresh={fetchOverview} />
         </div>
@@ -164,7 +202,7 @@ function FinanceCard({ label, value, sub, color }: any) {
   return (
     <div className={`p-6 rounded-[32px] border ${colors[color]} shadow-sm hover:shadow-md transition-all group cursor-default`}>
       <p className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</p>
-      <h3 className="text-3xl font-black mt-2 group-hover:scale-105 transition-transform origin-left">{value}</h3>
+      <h3 className="text-3xl font-black mt-2 group-hover:scale-105 transition-transform origin-left">{value || '0'}</h3>
       <p className="text-[10px] font-bold uppercase mt-1 opacity-50">{sub}</p>
     </div>
   );
@@ -181,7 +219,7 @@ function WalletList({ role, currencySymbol }: any) {
     setLoading(true);
     try {
       const res = await api.get(`/api/admin/finance/wallets?role=${role}&countryCode=${countryCode}`);
-      setData(res.data.data);
+      setData(res.data.data || []);
     } catch (e) {
       console.error('Failed to load wallets');
     } finally {
@@ -226,21 +264,21 @@ function WalletList({ role, currencySymbol }: any) {
               <tr><td colSpan={role === 'PROVIDER' ? 7 : 6} className="px-8 py-10 text-center text-neutral-400">No wallets found.</td></tr>
             ) : (
               data.map((item) => (
-                <tr key={item.user._id} className="hover:bg-neutral-50 transition-all group">
+                <tr key={item.user?._id} className="hover:bg-neutral-50 transition-all group">
                   <td className="px-8 py-5">
-                    <p className="font-black text-neutral-800">{item.user.firstName} {item.user.lastName}</p>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.user.email}</p>
+                    <p className="font-black text-neutral-800">{item.user?.firstName} {item.user?.lastName}</p>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.user?.email}</p>
                   </td>
-                  <td className="px-8 py-5 font-black text-neutral-900 text-right">{currencySymbol}{item.wallet.balanceMain.toFixed(2)}</td>
-                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{item.wallet.balanceReferral.toFixed(2)}</td>
-                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{item.wallet.balanceBonus.toFixed(2)}</td>
-                  {role === 'PROVIDER' && <td className="px-8 py-5 font-black text-amber-600 text-right">{currencySymbol}{item.wallet.balanceEscrow.toFixed(2)}</td>}
+                  <td className="px-8 py-5 font-black text-neutral-900 text-right">{currencySymbol}{(item.wallet?.balanceMain || 0).toFixed(2)}</td>
+                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{(item.wallet?.balanceReferral || 0).toFixed(2)}</td>
+                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{(item.wallet?.balanceBonus || 0).toFixed(2)}</td>
+                  {role === 'PROVIDER' && <td className="px-8 py-5 font-black text-amber-600 text-right">{currencySymbol}{(item.wallet?.balanceEscrow || 0).toFixed(2)}</td>}
                   <td className="px-8 py-5 text-center">
                      <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase ${
-                        item.wallet.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                        item.wallet.status === 'FROZEN' ? 'bg-blue-100 text-blue-700' :
+                        item.wallet?.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                        item.wallet?.status === 'FROZEN' ? 'bg-blue-100 text-blue-700' :
                         'bg-red-100 text-red-700'
-                     }`}>{item.wallet.status}</span>
+                     }`}>{item.wallet?.status || 'N/A'}</span>
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -297,8 +335,8 @@ function WalletAuditModal({ item, onClose }: any) {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const res = await api.get(`/api/admin/finance/ledger?countryCode=${item.user.countryCode}`);
-                const filtered = res.data.logs.filter((l: any) => l.fromUserId === item.user._id || l.toUserId === item.user._id);
+                const res = await api.get(`/api/admin/finance/ledger?countryCode=${item.user?.countryCode}`);
+                const filtered = (res.data.logs || []).filter((l: any) => l.fromUserId === item.user?._id || l.toUserId === item.user?._id);
                 setLogs(filtered);
             } catch (e) {
                 console.error("Ledger fetch failed");
@@ -306,7 +344,7 @@ function WalletAuditModal({ item, onClose }: any) {
                 setLoading(false);
             }
         };
-        fetchLogs();
+        if (item?.user?._id) fetchLogs();
     }, [item]);
 
     return (
@@ -315,7 +353,7 @@ function WalletAuditModal({ item, onClose }: any) {
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">Wallet Audit Trail</h3>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Snapshot for {item.user.firstName} {item.user.lastName}</p>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Snapshot for {item.user?.firstName} {item.user?.lastName}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
                 </div>
@@ -342,8 +380,8 @@ function WalletAuditModal({ item, onClose }: any) {
                                             <p className="text-[10px] font-mono text-neutral-400">{l.transactionId}</p>
                                         </td>
                                         <td className="px-10 py-5 text-neutral-500 text-xs font-bold italic">"{l.description}"</td>
-                                        <td className={`px-10 py-5 text-right font-black ${l.toUserId === item.user._id ? 'text-green-600' : 'text-red-600'}`}>
-                                            {l.toUserId === item.user._id ? '+' : '-'}{l.amount.toFixed(2)}
+                                        <td className={`px-10 py-5 text-right font-black ${l.toUserId === item.user?._id ? 'text-green-600' : 'text-red-600'}`}>
+                                            {l.toUserId === item.user?._id ? '+' : '-'}{l.amount.toFixed(2)}
                                         </td>
                                         <td className="px-10 py-5 text-right text-xs text-neutral-400 uppercase">
                                             <p className="font-black text-neutral-600">{formatDate(l.createdAt)}</p>
@@ -361,7 +399,7 @@ function WalletAuditModal({ item, onClose }: any) {
 }
 
 function StatusUpdateModal({ item, onClose, onRefresh }: any) {
-    const [status, setStatus] = useState(item.wallet.status);
+    const [status, setStatus] = useState(item.wallet?.status || 'ACTIVE');
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -369,7 +407,7 @@ function StatusUpdateModal({ item, onClose, onRefresh }: any) {
         if (!reason) return alert("Please provide a reason.");
         setLoading(true);
         try {
-            await api.patch(`/api/admin/users/${item.user._id}/wallet/status`, {
+            await api.patch(`/api/admin/users/${item.user?._id}/wallet/status`, {
                 status,
                 reason,
                 isFrozen: status === 'FROZEN',
@@ -391,7 +429,7 @@ function StatusUpdateModal({ item, onClose, onRefresh }: any) {
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">Update Wallet Status</h3>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Recipient: {item.user.firstName} {item.user.lastName}</p>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Recipient: {item.user?.firstName} {item.user?.lastName}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
                 </div>
@@ -442,7 +480,7 @@ function ManualMutationModal({ item, type, onClose, onRefresh }: any) {
         setLoading(true);
         try {
             await api.post(`/api/admin/users/wallet/mutate`, {
-                userId: item.user._id,
+                userId: item.user?._id,
                 amount: type === 'CREDIT' ? parseFloat(amount) : -parseFloat(amount),
                 balanceType,
                 reason
@@ -470,11 +508,11 @@ function ManualMutationModal({ item, type, onClose, onRefresh }: any) {
 
                     <div className="p-12 space-y-8 bg-white">
                         <div className="grid grid-cols-2 gap-y-6 text-sm">
-                            <DetailRow label="Recipient" value={`${item.user.firstName} ${item.user.lastName}`} highlight />
-                            <DetailRow label="Role" value={item.user.role} highlight color="text-blue-600" />
+                            <DetailRow label="Recipient" value={`${item.user?.firstName} ${item.user?.lastName}`} highlight />
+                            <DetailRow label="Role" value={item.user?.role} highlight color="text-blue-600" />
                             <DetailRow label="Wallet Impact" value={balanceType.replace('balance', '').toUpperCase()} highlight />
-                            <DetailRow label="Workspace" value={item.user.countryCode} />
-                            <DetailRow label="Current Balance" value={item.wallet[balanceType].toFixed(2)} />
+                            <DetailRow label="Workspace" value={item.user?.countryCode} />
+                            <DetailRow label="Current Balance" value={(item.wallet?.[balanceType] || 0).toFixed(2)} />
                             <div className="h-px bg-neutral-100 col-span-2"></div>
                             <DetailRow label="Mutation Signal" value={`${type === 'CREDIT' ? '+' : '-'}${parseFloat(amount).toFixed(2)}`} highlight color={type === 'CREDIT' ? 'text-green-600' : 'text-red-600'} />
                         </div>
@@ -506,7 +544,7 @@ function ManualMutationModal({ item, type, onClose, onRefresh }: any) {
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">{type} Wallet</h3>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">{item.user.firstName} {item.user.lastName} ({item.user.role})</p>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">{item.user?.firstName} {item.user?.lastName} ({item.user?.role})</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
                 </div>
@@ -523,7 +561,7 @@ function ManualMutationModal({ item, type, onClose, onRefresh }: any) {
                                 <option value="balanceCredit">Credit Pool</option>
                                 <option value="balanceReferral">Referral Pool</option>
                                 <option value="balanceBonus">Bonus Pool</option>
-                                {item.user.role === 'PROVIDER' && <option value="balanceEscrow">Escrow Sector</option>}
+                                {item.user?.role === 'PROVIDER' && <option value="balanceEscrow">Escrow Sector</option>}
                             </select>
                         </div>
                         <div className="col-span-2">
@@ -667,8 +705,8 @@ function LedgerExplorer({ currencySymbol }: any) {
             <div className="p-6 bg-neutral-50/30 border-t border-neutral-100 flex justify-between items-center text-[10px] font-black uppercase text-neutral-400 tracking-widest">
                 <p>Showing latest {logs.length} entries</p>
                 <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm">CSV</button>
-                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm">Excel</button>
+                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-all">CSV</button>
+                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-all">Excel</button>
                 </div>
             </div>
         </div>
@@ -847,7 +885,7 @@ function BonusCentre({ currencySymbol }: any) {
         try {
             const res = await api.get(`/api/admin/users/${form.targetId}`);
             const walletRes = await api.get(`/api/admin/finance/wallets?role=${res.data.user.role}&countryCode=${countryCode}`);
-            const userWallet = walletRes.data.data.find((w: any) => w.user._id === form.targetId);
+            const userWallet = walletRes.data.data.find((w: any) => w.user?._id === form.targetId);
 
             setConfirmData({
                 user: res.data.user,
@@ -1016,12 +1054,12 @@ function BonusCentre({ currencySymbol }: any) {
 
                         <div className="p-16 space-y-10 bg-white">
                             <div className="grid grid-cols-2 gap-x-12 gap-y-8 text-sm">
-                                <DetailRow label="Recipient Name" value={`${confirmData.user.firstName} ${confirmData.user.lastName}`} highlight />
-                                <DetailRow label="Account Role" value={confirmData.user.role} highlight color="text-blue-600" />
-                                <DetailRow label="Target Workspace" value={`${confirmData.user.countryCode} Sector`} />
-                                <DetailRow label="Wallet Status" value={confirmData.wallet.status} highlight color={confirmData.wallet.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'} />
-                                <DetailRow label="Available Balance" value={`${currencySymbol}${confirmData.wallet.balanceMain.toFixed(2)}`} />
-                                <DetailRow label="Bonus Balance" value={`${currencySymbol}${confirmData.wallet.balanceBonus.toFixed(2)}`} />
+                                <DetailRow label="Recipient Name" value={`${confirmData.user?.firstName} ${confirmData.user?.lastName}`} highlight />
+                                <DetailRow label="Account Role" value={confirmData.user?.role} highlight color="text-blue-600" />
+                                <DetailRow label="Target Workspace" value={`${confirmData.user?.countryCode} Sector`} />
+                                <DetailRow label="Wallet Status" value={confirmData.wallet?.status} highlight color={confirmData.wallet?.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'} />
+                                <DetailRow label="Available Balance" value={`${currencySymbol}${(confirmData.wallet?.balanceMain || 0).toFixed(2)}`} />
+                                <DetailRow label="Bonus Balance" value={`${currencySymbol}${(confirmData.wallet?.balanceBonus || 0).toFixed(2)}`} />
                                 <div className="col-span-2 h-px bg-neutral-100 my-2"></div>
                                 <DetailRow label="Disbursement Auth" value={`${currencySymbol}${confirmData.amount.toFixed(2)}`} highlight color="text-green-600" />
                                 <DetailRow label="Impacted Ledger" value={confirmData.balanceType.replace('balance', '').toUpperCase()} highlight />
@@ -1060,7 +1098,7 @@ function ReferralCentre({ currencySymbol }: any) {
         setLoading(true);
         try {
             const res = await api.get(`/api/admin/finance/referrals?countryCode=${countryCode}`);
-            setData(res.data.data);
+            setData(res.data.data || []);
         } catch (e) {
             console.error('Failed to load referrals');
         } finally {
@@ -1122,17 +1160,19 @@ function ReferralCentre({ currencySymbol }: any) {
 
 function EscrowMonitor({ currencySymbol, activeEscrow }: any) {
     return (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-neutral-900">
             <div className="bg-[#0A0A0A] p-20 rounded-[56px] text-white flex justify-between items-center shadow-2xl relative overflow-hidden border border-white/5 group">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(251,191,36,0.1),transparent)] group-hover:opacity-100 transition-opacity opacity-50"></div>
                 <div className="relative z-10">
-                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-neutral-500 mb-8 flex items-center gap-4 text-neutral-900">
-                        <div className="w-4 h-4 bg-amber-500 rounded-full animate-ping absolute"></div>
-                        <div className="w-4 h-4 bg-amber-500 rounded-full relative"></div>
+                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-neutral-500 mb-8 flex items-center gap-4">
+                        <span className="relative flex h-4 w-4">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+                        </span>
                         PieceJob Escrow Signal
                     </p>
-                    <h3 className="text-8xl font-black tracking-tighter leading-none group-hover:scale-[1.02] transition-transform duration-700">{currencySymbol}{activeEscrow.toLocaleString()}</h3>
-                    <p className="text-base font-bold text-neutral-400 mt-10 uppercase tracking-[0.1em] flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity text-neutral-900">
+                    <h3 className="text-8xl font-black tracking-tighter leading-none group-hover:scale-[1.02] transition-transform duration-700">{currencySymbol}{(activeEscrow || 0).toLocaleString()}</h3>
+                    <p className="text-base font-bold text-neutral-400 mt-10 uppercase tracking-[0.1em] flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity">
                         <ShieldCheck size={20} className="text-amber-500" />
                         Guaranteed Provider Yield locked in Cooling Protocol
                     </p>
@@ -1172,7 +1212,7 @@ function EscrowCard({ label, value, icon, color }: any) {
 }
 
 function AuditLogsView() {
-    const { countryCode } = useCountryStore();
+    const { countryCode, currentCountry } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedLog, setSelectedLog] = useState<any>(null);
@@ -1190,7 +1230,7 @@ function AuditLogsView() {
     };
 
     useEffect(() => {
-        fetchLogs();
+        if (countryCode) fetchLogs();
     }, [countryCode]);
 
     return (
@@ -1235,7 +1275,7 @@ function AuditLogsView() {
                                                 {log.adminId?.firstName?.charAt(0) || 'S'}
                                             </div>
                                             <div>
-                                                <p className="font-black text-neutral-800 text-xs">{log.adminId?.firstName ? `${log.adminId.firstName} ${log.adminId.lastName}` : (log.adminId || 'SYSTEM')}</p>
+                                                <p className="font-black text-neutral-800 text-xs">{renderActor(log.adminId)}</p>
                                                 <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{log.adminRole || 'ORACLE_PROCESS'}</p>
                                             </div>
                                         </div>
@@ -1274,10 +1314,10 @@ function AuditLogsView() {
                             <h3 className="text-xl font-black uppercase tracking-tight">Audit Event Trace</h3>
                             <button onClick={() => setSelectedLog(null)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
                         </div>
-                        <div className="p-10 space-y-6">
+                        <div className="p-10 space-y-6 text-neutral-900">
                             <div className="grid grid-cols-2 gap-6">
                                 <DetailRow label="Trace ID" value={selectedLog.auditId} highlight />
-                                <DetailRow label="Actor" value={selectedLog.adminId?.firstName ? `${selectedLog.adminId.firstName} ${selectedLog.adminId.lastName}` : 'SYSTEM'} />
+                                <DetailRow label="Actor" value={renderActor(selectedLog.adminId)} />
                                 <DetailRow label="Action" value={selectedLog.action} />
                                 <DetailRow label="Category" value={selectedLog.auditType} />
                                 <DetailRow label="IP Address" value={selectedLog.ipAddress || 'Internal'} />
@@ -1351,7 +1391,7 @@ function ReconciliationHub({ onRefresh }: { onRefresh: () => void }) {
                     <div className="min-h-[160px] flex items-center justify-center text-center">
                         {results ? (
                              <div className="animate-in slide-in-from-bottom-4">
-                                <p className="text-5xl font-black text-neutral-900">{results.walletMismatches.length}</p>
+                                <p className="text-5xl font-black text-neutral-900">{(results.walletMismatches || []).length}</p>
                                 <p className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-4">Divergent signals detected in scan</p>
                                 <div className="mt-8 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm flex items-center gap-3">
                                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>

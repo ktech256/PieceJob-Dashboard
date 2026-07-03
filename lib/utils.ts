@@ -17,13 +17,22 @@ export function formatCurrency(amount: number, currency: string, locale: string 
   }
 }
 
-export function formatDateTime(date: string | Date, timezone: string = "UTC", locale: string = "en-US") {
-  return new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: timezone,
-  }).format(new Date(date));
+export function formatDateTime(date: string | Date | undefined, timezone: string = "UTC", locale: string = "en-US") {
+  if (!date) return "N/A";
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "Invalid Date";
+
+    return new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: timezone || "UTC",
+    }).format(d);
+  } catch (e) {
+    console.error("Format error", e);
+    return "Error";
+  }
 }

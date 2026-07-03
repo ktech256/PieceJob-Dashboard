@@ -27,16 +27,49 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const formatDate = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) {
+        return "Error";
+    }
 };
 
-const formatTime = (date: string | Date) => {
-    return new Date(date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const formatTime = (date: string | Date | undefined) => {
+    if (!date) return "--:--";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "--:--";
+        return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+        return "Error";
+    }
 };
 
-const formatDateTimeLong = (date: string | Date) => {
-    return new Date(date).toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const formatDateTimeLong = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return d.toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+        return "Error";
+    }
+};
+
+const renderActor = (actor: any) => {
+    if (!actor) return 'SYSTEM';
+    if (typeof actor === 'string') return actor;
+    if (typeof actor !== 'object') return String(actor);
+
+    // Defensive check to avoid rendering the whole object
+    const name = actor.firstName ? `${actor.firstName} ${actor.lastName || ''}`.trim() : null;
+    const identifier = name || actor.email || actor.auditId || actor._id?.toString() || 'CORE_ENGINE';
+
+    return String(identifier);
 };
 
 export default function AuditLedgerPortal() {
@@ -172,7 +205,7 @@ export default function AuditLedgerPortal() {
                                             {log.adminId?.firstName?.charAt(0) || 'S'}
                                         </div>
                                         <div>
-                                            <p className="text-neutral-900 uppercase font-black text-xs">{log.adminId?.firstName ? `${log.adminId.firstName} ${log.adminId.lastName}` : (log.adminId || 'SYSTEM_PROCESS')}</p>
+                                            <p className="text-neutral-900 uppercase font-black text-xs">{renderActor(log.adminId || log.userId)}</p>
                                             <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">{log.adminRole || 'CORE_ORACLE'}</p>
                                         </div>
                                     </div>
@@ -201,7 +234,7 @@ export default function AuditLedgerPortal() {
                                             <p className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">{log.financialInfo.currency}</p>
                                         </div>
                                     ) : (
-                                        <span className="text-neutral-300 font-black tracking-widest">---</span>
+                                        <span className="text-neutral-200 font-black tracking-widest">---</span>
                                     )}
                                 </td>
                                 <td className="px-10 py-6 text-right">
@@ -243,6 +276,7 @@ export default function AuditLedgerPortal() {
                   <div className="p-12 space-y-10 max-h-[600px] overflow-y-auto custom-scrollbar">
                       <div className="grid grid-cols-2 gap-x-12 gap-y-10">
                           <DetailItem label="Auth Action" value={selectedLog.action} highlight />
+                          <DetailItem label="Authorized Actor" value={renderActor(selectedLog.adminId || selectedLog.userId)} highlight />
                           <DetailItem label="Ledger Category" value={selectedLog.auditType} />
                           <DetailItem label="Temporal Stamp" value={formatDateTimeLong(selectedLog.createdAt) + ' UTC'} />
                           <DetailItem label="Network Protocol" value={selectedLog.systemSource} />
