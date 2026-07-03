@@ -75,7 +75,8 @@ export default function ServiceCatalog() {
           ...data,
           equipmentRequired: (data.equipmentRequired as string).split(',').map(i => i.trim()).filter(i => i),
           isActive: data.isActive === 'on',
-          countryCode: data.countryCode || 'GLOBAL'
+          countryCode: data.countryCode || 'GLOBAL',
+          bookingFee: parseFloat(data.bookingFee as string) || 0
       };
 
       try {
@@ -311,6 +312,7 @@ export default function ServiceCatalog() {
                           <SelectGroup label="Category" name="category" options={categories.map(c => ({ value: c.code, label: c.name }))} defaultValue={currentService?.category} />
                           <SelectGroup label="Gender Rule" name="genderRule" options={GENDER_RULES.map(r => ({ value: r, label: r.replace('_', ' ') }))} defaultValue={currentService?.genderRule} />
                           <SelectGroup label="Verification Requirement" name="verificationLevel" options={VERIFICATION_LEVELS.map(l => ({ value: l, label: l.replace('_', ' ') }))} defaultValue={currentService?.verificationLevel} />
+                          <FormGroup label="Booking Fee (Workspace Currency)" name="bookingFee" type="number" step="0.01" defaultValue={currentService?.bookingFee} placeholder="Leave blank for no fee" />
                           <FormGroup label="Equipment (Comma separated)" name="equipmentRequired" defaultValue={currentService?.equipmentRequired?.join(', ')} />
                           <FormGroup label="Target Country (Default: GLOBAL)" name="countryCode" defaultValue={currentService?.countryCode || 'GLOBAL'} />
                           <div className="col-span-2">
@@ -393,7 +395,12 @@ function ServiceCard({ service, categoryName, onToggle, onEdit, onDelete }: any)
                     <div className={`w-2 h-2 rounded-full ${service.isActive ? 'bg-brand-provider-green animate-pulse' : 'bg-neutral-300'}`}></div>
                     <h3 className="text-2xl font-black text-neutral-900 leading-tight">{service.name}</h3>
                 </div>
-                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{categoryName}</p>
+                <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{categoryName}</p>
+                    <span className="text-xs font-black text-neutral-900">
+                        {service.bookingFee > 0 ? `Fee: ${service.bookingFee}` : 'Free Booking'}
+                    </span>
+                </div>
             </div>
 
             <div className="space-y-6">
