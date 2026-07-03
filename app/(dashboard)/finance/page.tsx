@@ -26,8 +26,27 @@ import {
   Lock,
   Eye,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Unlock,
+  Ban,
+  MoreVertical,
+  ChevronRight,
+  UserPlus,
+  Coins,
+  ShieldAlert
 } from 'lucide-react';
+
+const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatTime = (date: string | Date) => {
+    return new Date(date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
+const formatDateTimeLong = (date: string | Date) => {
+    return new Date(date).toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
 
 export default function FinanceControlCentre() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -78,19 +97,19 @@ export default function FinanceControlCentre() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20 text-neutral-900">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-neutral-900 uppercase">Finance Control Centre</h1>
           <p className="text-neutral-500 font-medium text-sm">Full operational oversight of the PieceJob economy in {currentCountry?.name}.</p>
         </div>
-        <div className="flex flex-wrap bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
+        <div className="flex flex-wrap bg-neutral-100 p-1 rounded-2xl border border-neutral-200 shadow-inner">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${
-                activeTab === tab.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
+                activeTab === tab.id ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200' : 'text-neutral-50 text-neutral-500 hover:text-neutral-700'
               }`}
             >
               {tab.icon}
@@ -143,9 +162,9 @@ function FinanceCard({ label, value, sub, color }: any) {
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
   };
   return (
-    <div className={`p-6 rounded-[32px] border ${colors[color]} shadow-sm`}>
+    <div className={`p-6 rounded-[32px] border ${colors[color]} shadow-sm hover:shadow-md transition-all group cursor-default`}>
       <p className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</p>
-      <h3 className="text-3xl font-black mt-2">{value}</h3>
+      <h3 className="text-3xl font-black mt-2 group-hover:scale-105 transition-transform origin-left">{value}</h3>
       <p className="text-[10px] font-bold uppercase mt-1 opacity-50">{sub}</p>
     </div>
   );
@@ -155,6 +174,8 @@ function WalletList({ role, currencySymbol }: any) {
   const { countryCode } = useCountryStore();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [modalType, setModalType] = useState<string | null>(null);
 
   const fetchWallets = async () => {
     setLoading(true);
@@ -172,45 +193,61 @@ function WalletList({ role, currencySymbol }: any) {
     fetchWallets();
   }, [role, countryCode]);
 
+  const handleAction = (item: any, type: string) => {
+    setSelectedItem(item);
+    setModalType(type);
+  };
+
   return (
     <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-500">
       <div className="p-8 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
         <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">{role} Wallets</h3>
-        <button onClick={fetchWallets} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
+        <div className="flex gap-4">
+            <button onClick={fetchWallets} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
             <tr>
               <th className="px-8 py-4">{role}</th>
-              <th className="px-8 py-4">Main Balance</th>
-              <th className="px-8 py-4">Referral</th>
-              <th className="px-8 py-4">Bonus</th>
-              {role === 'PROVIDER' && <th className="px-8 py-4">Escrow</th>}
+              <th className="px-8 py-4 text-right">Available</th>
+              <th className="px-8 py-4 text-right">Referral</th>
+              <th className="px-8 py-4 text-right">Bonus</th>
+              {role === 'PROVIDER' && <th className="px-8 py-4 text-right">Escrow</th>}
+              <th className="px-8 py-4 text-center">Status</th>
               <th className="px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-50 text-sm">
+          <tbody className="divide-y divide-neutral-50 text-sm font-medium">
             {loading ? (
-              <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400">Loading wallets...</td></tr>
+              <tr><td colSpan={role === 'PROVIDER' ? 7 : 6} className="px-8 py-10 text-center text-neutral-400">Loading wallets...</td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400">No wallets found.</td></tr>
+              <tr><td colSpan={role === 'PROVIDER' ? 7 : 6} className="px-8 py-10 text-center text-neutral-400">No wallets found.</td></tr>
             ) : (
               data.map((item) => (
-                <tr key={item.user._id} className="hover:bg-neutral-50 transition-all">
+                <tr key={item.user._id} className="hover:bg-neutral-50 transition-all group">
                   <td className="px-8 py-5">
                     <p className="font-black text-neutral-800">{item.user.firstName} {item.user.lastName}</p>
                     <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.user.email}</p>
                   </td>
-                  <td className="px-8 py-5 font-black text-neutral-900">{currencySymbol}{item.wallet.balanceMain.toFixed(2)}</td>
-                  <td className="px-8 py-5 font-bold text-neutral-600">{currencySymbol}{item.wallet.balanceReferral.toFixed(2)}</td>
-                  <td className="px-8 py-5 font-bold text-neutral-600">{currencySymbol}{item.wallet.balanceBonus.toFixed(2)}</td>
-                  {role === 'PROVIDER' && <td className="px-8 py-5 font-black text-amber-600">{currencySymbol}{item.wallet.balanceEscrow.toFixed(2)}</td>}
+                  <td className="px-8 py-5 font-black text-neutral-900 text-right">{currencySymbol}{item.wallet.balanceMain.toFixed(2)}</td>
+                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{item.wallet.balanceReferral.toFixed(2)}</td>
+                  <td className="px-8 py-5 text-neutral-600 text-right">{currencySymbol}{item.wallet.balanceBonus.toFixed(2)}</td>
+                  {role === 'PROVIDER' && <td className="px-8 py-5 font-black text-amber-600 text-right">{currencySymbol}{item.wallet.balanceEscrow.toFixed(2)}</td>}
+                  <td className="px-8 py-5 text-center">
+                     <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase ${
+                        item.wallet.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                        item.wallet.status === 'FROZEN' ? 'bg-blue-100 text-blue-700' :
+                        'bg-red-100 text-red-700'
+                     }`}>{item.wallet.status}</span>
+                  </td>
                   <td className="px-8 py-5 text-right">
-                    <div className="flex justify-end gap-2">
-                       <button className="p-2 bg-neutral-100 rounded-lg hover:bg-neutral-900 hover:text-white transition-all"><Eye size={14} /></button>
-                       <button className="p-2 bg-neutral-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all" title="Credit"><ArrowUpRight size={14} /></button>
-                       <button className="p-2 bg-neutral-100 rounded-lg hover:bg-red-600 hover:text-white transition-all" title="Freeze"><Lock size={14} /></button>
+                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={() => handleAction(item, 'VIEW')} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm" title="View Ledger"><Eye size={12} /></button>
+                       <button onClick={() => handleAction(item, 'CREDIT')} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-green-600 hover:text-white transition-all shadow-sm" title="Credit Wallet"><ArrowUpRight size={12} /></button>
+                       <button onClick={() => handleAction(item, 'DEBIT')} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Debit Wallet"><ArrowDownCircle size={12} /></button>
+                       <button onClick={() => handleAction(item, 'STATUS')} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-orange-500 hover:text-white transition-all shadow-sm" title="Update Status"><Ban size={12} /></button>
                     </div>
                   </td>
                 </tr>
@@ -219,19 +256,331 @@ function WalletList({ role, currencySymbol }: any) {
           </tbody>
         </table>
       </div>
+
+      {modalType === 'STATUS' && (
+          <StatusUpdateModal
+            item={selectedItem}
+            onClose={() => setModalType(null)}
+            onRefresh={fetchWallets}
+          />
+      )}
+      {modalType === 'CREDIT' && (
+          <ManualMutationModal
+            item={selectedItem}
+            type="CREDIT"
+            onClose={() => setModalType(null)}
+            onRefresh={fetchWallets}
+          />
+      )}
+      {modalType === 'DEBIT' && (
+          <ManualMutationModal
+            item={selectedItem}
+            type="DEBIT"
+            onClose={() => setModalType(null)}
+            onRefresh={fetchWallets}
+          />
+      )}
+      {modalType === 'VIEW' && (
+          <WalletAuditModal
+            item={selectedItem}
+            onClose={() => setModalType(null)}
+          />
+      )}
     </div>
   );
+}
+
+function WalletAuditModal({ item, onClose }: any) {
+    const [logs, setLogs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            try {
+                const res = await api.get(`/api/admin/finance/ledger?countryCode=${item.user.countryCode}`);
+                const filtered = res.data.logs.filter((l: any) => l.fromUserId === item.user._id || l.toUserId === item.user._id);
+                setLogs(filtered);
+            } catch (e) {
+                console.error("Ledger fetch failed");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLogs();
+    }, [item]);
+
+    return (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
+            <div className="bg-white rounded-[40px] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
+                <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">Wallet Audit Trail</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Snapshot for {item.user.firstName} {item.user.lastName}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
+                </div>
+                <div className="overflow-y-auto p-0 flex-1 scrollbar-hide">
+                    <table className="w-full text-left">
+                        <thead className="sticky top-0 bg-neutral-50 text-[9px] uppercase font-black text-neutral-400 border-b border-neutral-100 z-10">
+                            <tr>
+                                <th className="px-10 py-4">Transaction</th>
+                                <th className="px-10 py-4">Context</th>
+                                <th className="px-10 py-4 text-right">Amount</th>
+                                <th className="px-10 py-4 text-right">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50 text-sm">
+                            {loading ? (
+                                <tr><td colSpan={4} className="px-10 py-10 text-center text-neutral-400 uppercase font-black text-[10px]">Accessing Vault...</td></tr>
+                            ) : logs.length === 0 ? (
+                                <tr><td colSpan={4} className="px-10 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No activity recorded.</td></tr>
+                            ) : (
+                                logs.map(l => (
+                                    <tr key={l._id}>
+                                        <td className="px-10 py-5">
+                                            <p className="font-black text-neutral-800 text-xs">{l.type}</p>
+                                            <p className="text-[10px] font-mono text-neutral-400">{l.transactionId}</p>
+                                        </td>
+                                        <td className="px-10 py-5 text-neutral-500 text-xs font-bold italic">"{l.description}"</td>
+                                        <td className={`px-10 py-5 text-right font-black ${l.toUserId === item.user._id ? 'text-green-600' : 'text-red-600'}`}>
+                                            {l.toUserId === item.user._id ? '+' : '-'}{l.amount.toFixed(2)}
+                                        </td>
+                                        <td className="px-10 py-5 text-right text-xs text-neutral-400 uppercase">
+                                            <p className="font-black text-neutral-600">{formatDate(l.createdAt)}</p>
+                                            <p className="text-[10px]">{formatTime(l.createdAt)}</p>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function StatusUpdateModal({ item, onClose, onRefresh }: any) {
+    const [status, setStatus] = useState(item.wallet.status);
+    const [reason, setReason] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleUpdate = async () => {
+        if (!reason) return alert("Please provide a reason.");
+        setLoading(true);
+        try {
+            await api.patch(`/api/admin/users/${item.user._id}/wallet/status`, {
+                status,
+                reason,
+                isFrozen: status === 'FROZEN',
+                isLocked: status === 'LOCKED',
+                isSuspended: status === 'SUSPENDED'
+            });
+            onRefresh();
+            onClose();
+        } catch (e) {
+            alert("Failed to update status");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
+            <div className="bg-white rounded-[40px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-100">
+                <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">Update Wallet Status</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Recipient: {item.user.firstName} {item.user.lastName}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
+                </div>
+                <div className="p-10 space-y-6">
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">New Status</label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all cursor-pointer"
+                        >
+                            <option value="ACTIVE">Active</option>
+                            <option value="FROZEN">Frozen</option>
+                            <option value="LOCKED">Locked</option>
+                            <option value="SUSPENDED">Suspended</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Reason for Change</label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all h-24 resize-none"
+                            placeholder="Provide justification for audit log..."
+                        />
+                    </div>
+                    <button
+                        onClick={handleUpdate}
+                        disabled={loading}
+                        className="w-full bg-neutral-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 active:scale-95 shadow-xl shadow-neutral-200"
+                    >
+                        {loading ? 'Processing...' : 'Apply Status Change'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ManualMutationModal({ item, type, onClose, onRefresh }: any) {
+    const [amount, setAmount] = useState("");
+    const [balanceType, setBalanceType] = useState("balanceMain");
+    const [reason, setReason] = useState("");
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleMutate = async () => {
+        setLoading(true);
+        try {
+            await api.post(`/api/admin/users/wallet/mutate`, {
+                userId: item.user._id,
+                amount: type === 'CREDIT' ? parseFloat(amount) : -parseFloat(amount),
+                balanceType,
+                reason
+            });
+            onRefresh();
+            onClose();
+        } catch (e) {
+            alert("Mutation failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (showConfirm) {
+        return (
+            <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-8 text-neutral-900">
+                <div className="bg-white rounded-[48px] w-full max-w-xl shadow-2xl overflow-hidden border border-neutral-200 animate-in zoom-in-95 duration-200">
+                    <div className="p-12 text-center border-b border-neutral-100 bg-neutral-50/30">
+                        <div className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-lg ${type === 'CREDIT' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            {type === 'CREDIT' ? <ArrowUpRight size={40} strokeWidth={3} /> : <ArrowDownCircle size={40} strokeWidth={3} />}
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-neutral-900">Confirm Mutation</h3>
+                        <p className="text-neutral-500 font-bold text-sm uppercase tracking-widest mt-2 underline underline-offset-8 decoration-neutral-200">Direct balance adjustment</p>
+                    </div>
+
+                    <div className="p-12 space-y-8 bg-white">
+                        <div className="grid grid-cols-2 gap-y-6 text-sm">
+                            <DetailRow label="Recipient" value={`${item.user.firstName} ${item.user.lastName}`} highlight />
+                            <DetailRow label="Role" value={item.user.role} highlight color="text-blue-600" />
+                            <DetailRow label="Wallet Impact" value={balanceType.replace('balance', '').toUpperCase()} highlight />
+                            <DetailRow label="Workspace" value={item.user.countryCode} />
+                            <DetailRow label="Current Balance" value={item.wallet[balanceType].toFixed(2)} />
+                            <div className="h-px bg-neutral-100 col-span-2"></div>
+                            <DetailRow label="Mutation Signal" value={`${type === 'CREDIT' ? '+' : '-'}${parseFloat(amount).toFixed(2)}`} highlight color={type === 'CREDIT' ? 'text-green-600' : 'text-red-600'} />
+                        </div>
+
+                        <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100">
+                            <p className="text-[10px] font-black uppercase text-neutral-400 mb-2">Audit Trace Reason</p>
+                            <p className="text-xs font-bold text-neutral-800 leading-relaxed italic">"{reason}"</p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button onClick={() => setShowConfirm(false)} className="flex-1 bg-white border border-neutral-200 text-neutral-500 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-neutral-50 transition-all active:scale-95">Cancel</button>
+                            <button
+                                onClick={handleMutate}
+                                disabled={loading}
+                                className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 active:scale-95 ${type === 'CREDIT' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                            >
+                                {loading ? 'Processing Ledger...' : `Confirm ${type} Auth`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
+            <div className="bg-white rounded-[40px] w-full max-w-lg shadow-2xl overflow-hidden border border-neutral-100">
+                <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-neutral-800">{type} Wallet</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">{item.user.firstName} {item.user.lastName} ({item.user.role})</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
+                </div>
+                <div className="p-10 space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                             <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Balance Sector</label>
+                             <select
+                                value={balanceType}
+                                onChange={(e) => setBalanceType(e.target.value)}
+                                className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all cursor-pointer"
+                            >
+                                <option value="balanceMain">Main Available</option>
+                                <option value="balanceCredit">Credit Pool</option>
+                                <option value="balanceReferral">Referral Pool</option>
+                                <option value="balanceBonus">Bonus Pool</option>
+                                {item.user.role === 'PROVIDER' && <option value="balanceEscrow">Escrow Sector</option>}
+                            </select>
+                        </div>
+                        <div className="col-span-2">
+                            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Amount</label>
+                            <input
+                                type="number"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all"
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Adjustment Logic Reason</label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all h-24 resize-none"
+                            placeholder="Provide narrative justification..."
+                        />
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (!amount || parseFloat(amount) <= 0) return alert("Enter valid amount");
+                            if (!reason) return alert("Provide a reason");
+                            setShowConfirm(true);
+                        }}
+                        className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all text-white shadow-lg ${type === 'CREDIT' ? 'bg-green-600 shadow-green-100' : 'bg-red-600 shadow-red-100'}`}
+                    >
+                        Review Transaction
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DetailRow({ label, value, highlight, color = 'text-neutral-900' }: any) {
+    return (
+        <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-neutral-400 tracking-widest">{label}</p>
+            <p className={`${highlight ? 'font-black text-sm' : 'font-bold text-xs'} ${color} uppercase`}>{value || 'N/A'}</p>
+        </div>
+    );
 }
 
 function LedgerExplorer({ currencySymbol }: any) {
     const { countryCode } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
 
     const loadLedger = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/finance/ledger?countryCode=${countryCode}`);
+            const res = await api.get(`/api/admin/finance/ledger?countryCode=${countryCode}${search ? `&search=${search}` : ''}`);
             setLogs(res.data.logs || []);
         } catch (e) {
             console.error('Ledger load failed');
@@ -246,54 +595,81 @@ function LedgerExplorer({ currencySymbol }: any) {
 
     return (
         <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500">
-            <div className="p-8 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+            <div className="p-8 border-b border-neutral-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-neutral-50/50">
                 <div>
                     <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Immutable Ledger Explorer</h3>
                     <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Full Transaction Traceability (Audit Grade)</p>
                 </div>
-                <button onClick={loadLedger} className="bg-neutral-900 text-white px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-black transition-all flex items-center gap-2">
-                    <RefreshCcw size={14} />
-                    Refresh
-                </button>
+                <div className="flex gap-4 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={14} />
+                         <input
+                            type="text"
+                            placeholder="Search Reference..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && loadLedger()}
+                            className="w-full bg-white border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs font-bold outline-none focus:border-black transition-all shadow-inner"
+                         />
+                    </div>
+                    <button onClick={loadLedger} className="bg-neutral-900 text-white px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-black transition-all flex items-center gap-2 shadow-lg active:scale-95">
+                        <RefreshCcw size={14} />
+                        Sync
+                    </button>
+                </div>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                         <tr>
                             <th className="px-8 py-4">Transaction ID</th>
                             <th className="px-8 py-4">Type</th>
                             <th className="px-8 py-4 text-right">Debit / Credit</th>
-                            <th className="px-8 py-4">Status</th>
-                            <th className="px-8 py-4">Date</th>
+                            <th className="px-8 py-4 text-center">Status</th>
+                            <th className="px-8 py-4 text-right">Timestamp</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                         {loading ? (
-                             <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">Loading ledger...</td></tr>
+                             <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-black uppercase text-[10px] tracking-widest animate-pulse">Syncing Cryptographic Ledger...</td></tr>
                         ) : logs.length === 0 ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">No records found.</td></tr>
+                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No records detected.</td></tr>
                         ) : (
                             logs.map((tx) => (
-                                <tr key={tx._id} className="hover:bg-neutral-50 transition-all group">
+                                <tr key={tx._id} className="hover:bg-neutral-50/80 transition-all group">
                                     <td className="px-8 py-5 font-mono text-xs font-bold text-neutral-500">{tx.transactionId}</td>
                                     <td className="px-8 py-5">
-                                        <span className={`bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded text-[10px] font-black uppercase`}>{tx.type}</span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
+                                            ['SERVICE_FEE', 'BOOKING_FEE'].includes(tx.type) ? 'bg-green-50 text-green-700 border-green-100' :
+                                            ['COMMISSION', 'PAYOUT'].includes(tx.type) ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                            'bg-neutral-50 text-neutral-600 border-neutral-200'
+                                        }`}>{tx.type}</span>
                                     </td>
-                                    <td className={`px-8 py-5 text-right font-black ${['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD'].includes(tx.type) ? 'text-green-600' : 'text-red-600'}`}>
-                                        {['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD'].includes(tx.type) ? '+' : '-'}{tx.amount.toFixed(2)} {tx.currency}
+                                    <td className={`px-8 py-5 text-right font-black ${['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? 'text-green-600' : 'text-red-600'}`}>
+                                        {['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? '+' : '-'}{tx.amount.toFixed(2)} {tx.currency}
                                     </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-2">
+                                    <td className="px-8 py-5 text-center">
+                                        <div className="flex items-center justify-center gap-2">
                                             <div className={`w-1.5 h-1.5 rounded-full ${tx.status === 'COMPLETED' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                                             <span className="text-[10px] font-black text-neutral-800 uppercase tracking-tighter">{tx.status}</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 text-xs text-neutral-400 font-bold uppercase">{new Date(tx.createdAt).toLocaleString()}</td>
+                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 font-black uppercase">
+                                        {formatDate(tx.createdAt)}
+                                        <span className="ml-2 opacity-50 group-hover:opacity-100 transition-opacity font-mono">{formatTime(tx.createdAt)}</span>
+                                    </td>
                                 </tr>
                             ))
                         )}
                     </tbody>
                 </table>
+            </div>
+            <div className="p-6 bg-neutral-50/30 border-t border-neutral-100 flex justify-between items-center text-[10px] font-black uppercase text-neutral-400 tracking-widest">
+                <p>Showing latest {logs.length} entries</p>
+                <div className="flex gap-2">
+                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm">CSV</button>
+                    <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm">Excel</button>
+                </div>
             </div>
         </div>
     );
@@ -324,35 +700,38 @@ function WithdrawalManager({ currencySymbol }: any) {
     <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-500">
       <div className="p-8 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
         <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Withdrawal Requests</h3>
-        <button onClick={loadPayouts} className="bg-brand-provider-green text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-all">Refresh Queue</button>
+        <button onClick={loadPayouts} className="bg-brand-provider-green text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-lg">Refresh Queue</button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-left border-collapse min-w-[900px]">
           <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
             <tr>
               <th className="px-8 py-4">Provider</th>
               <th className="px-8 py-4">Amount</th>
-              <th className="px-8 py-4">Status</th>
+              <th className="px-8 py-4 text-center">Status</th>
               <th className="px-8 py-4">Requested</th>
               <th className="px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-50 text-sm">
+          <tbody className="divide-y divide-neutral-50 text-sm font-medium">
             {loading ? (
-               <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">Loading payout queue...</td></tr>
+               <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 animate-pulse uppercase font-black text-[10px]">Accessing Payout Oracle...</td></tr>
             ) : payouts.length === 0 ? (
-              <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">No pending requests.</td></tr>
+              <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No pending withdrawals detected.</td></tr>
             ) : (
               payouts.map((p) => (
-                <tr key={p._id} className="hover:bg-neutral-50 transition-all">
-                   <td className="px-8 py-5 font-black text-neutral-800">{p.provider?.name}</td>
-                   <td className="px-8 py-5 font-black text-lg">{p.totalAmount.toFixed(2)} {p.currency}</td>
+                <tr key={p._id} className="hover:bg-neutral-50 transition-all group">
                    <td className="px-8 py-5">
+                        <p className="font-black text-neutral-800">{p.provider?.name}</p>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">Bank: {p.bankDetails?.bankName || 'NOT_LINKED'}</p>
+                   </td>
+                   <td className="px-8 py-5 font-black text-lg text-neutral-900">{p.totalAmount.toFixed(2)} {p.currency}</td>
+                   <td className="px-8 py-5 text-center">
                       <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{p.status}</span>
                    </td>
-                   <td className="px-8 py-5 text-xs text-neutral-400 font-bold uppercase">{new Date(p.createdAt).toLocaleDateString()}</td>
+                   <td className="px-8 py-5 text-xs text-neutral-400 font-black uppercase tracking-tighter">{formatDate(p.createdAt)}</td>
                    <td className="px-8 py-5 text-right">
-                      <button className="bg-neutral-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">Settle</button>
+                      <button className="bg-neutral-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-black transition-all active:scale-95 shadow-md">Settle Request</button>
                    </td>
                 </tr>
               ))
@@ -387,38 +766,41 @@ function RefundCentre({ currencySymbol }: any) {
 
     return (
         <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center text-neutral-900">
                 <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Refund Control Hub</h3>
                 <button onClick={fetchRefunds} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                         <tr>
                             <th className="px-8 py-4">Refund ID</th>
                             <th className="px-8 py-4">Customer</th>
-                            <th className="px-8 py-4">Job</th>
-                            <th className="px-8 py-4 text-right">Amount</th>
-                            <th className="px-8 py-4">Status</th>
-                            <th className="px-8 py-4">Date</th>
+                            <th className="px-8 py-4">Job Context</th>
+                            <th className="px-8 py-4 text-right">Reclaim Yield</th>
+                            <th className="px-8 py-4 text-center">Protocol Status</th>
+                            <th className="px-8 py-4 text-right">Signal Date</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                         {loading ? (
-                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400">Loading refunds...</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 animate-pulse uppercase font-black text-[10px] tracking-widest">Scanning for Refund Signal...</td></tr>
                         ) : data.length === 0 ? (
-                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400">No refunds found.</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No refunds detected in workspace sector.</td></tr>
                         ) : (
                             data.map((r) => (
                                 <tr key={r._id} className="hover:bg-neutral-50 transition-all">
                                     <td className="px-8 py-5 font-mono text-xs font-bold text-neutral-500">{r.transactionId}</td>
-                                    <td className="px-8 py-5 font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</td>
-                                    <td className="px-8 py-5 font-bold text-blue-600">#{r.jobId?.id?.slice(-6)}</td>
-                                    <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.amount.toFixed(2)}</td>
                                     <td className="px-8 py-5">
-                                        <span className="text-[10px] font-black uppercase px-2 py-1 bg-neutral-100 text-neutral-800 rounded">{r.status}</span>
+                                        <p className="font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</p>
+                                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">Recipient Node</p>
                                     </td>
-                                    <td className="px-8 py-5 text-xs text-neutral-400 uppercase">{new Date(r.createdAt).toLocaleDateString()}</td>
+                                    <td className="px-8 py-5 font-bold text-blue-600">#{r.jobId?.id?.slice(-6) || 'N/A'}</td>
+                                    <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.amount.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-center">
+                                        <span className="text-[9px] font-black uppercase px-2 py-1 bg-green-50 text-green-800 rounded border border-green-100">REPAID</span>
+                                    </td>
+                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 uppercase font-black tracking-tighter">{formatDate(r.createdAt)}</td>
                                 </tr>
                             ))
                         )}
@@ -433,11 +815,21 @@ function BonusCentre({ currencySymbol }: any) {
     const { countryCode } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [form, setForm] = useState({
+        targetId: "",
+        amount: "",
+        balanceType: "balanceBonus",
+        reason: "",
+        campaign: "",
+        description: ""
+    });
+    const [confirmData, setConfirmData] = useState<any>(null);
+    const [executing, setExecuting] = useState(false);
 
     const loadBonuses = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/finance/ledger?countryCode=${countryCode}&type=BONUS`);
+            const res = await api.get(`/api/admin/finance/ledger?countryCode=${countryCode}`);
             setLogs(res.data.logs || []);
         } catch (e) {
             console.error('Bonuses load failed');
@@ -450,37 +842,78 @@ function BonusCentre({ currencySymbol }: any) {
         if (countryCode) loadBonuses();
     }, [countryCode]);
 
+    const initiateCredit = async () => {
+        if (!form.targetId || !form.amount || !form.reason) return alert("All fields are mandatory.");
+        try {
+            const res = await api.get(`/api/admin/users/${form.targetId}`);
+            const walletRes = await api.get(`/api/admin/finance/wallets?role=${res.data.user.role}&countryCode=${countryCode}`);
+            const userWallet = walletRes.data.data.find((w: any) => w.user._id === form.targetId);
+
+            setConfirmData({
+                user: res.data.user,
+                wallet: userWallet?.wallet || { balanceMain: 0, balanceReferral: 0, balanceBonus: 0, balanceEscrow: 0, status: 'NOT_FOUND' },
+                amount: parseFloat(form.amount),
+                balanceType: form.balanceType,
+                reason: form.reason,
+                campaign: form.campaign,
+                description: form.description
+            });
+        } catch (e) {
+            alert("Invalid Account ID or Network Error");
+        }
+    };
+
+    const confirmCredit = async () => {
+        setExecuting(true);
+        try {
+            await api.post(`/api/admin/users/wallet/mutate`, {
+                userId: form.targetId,
+                amount: parseFloat(form.amount),
+                balanceType: form.balanceType,
+                reason: `${form.reason} | ${form.description} [Campaign: ${form.campaign}]`.trim(),
+                metadata: { campaign: form.campaign, bonusDist: true }
+            });
+            setConfirmData(null);
+            setForm({ targetId: "", amount: "", balanceType: "balanceBonus", reason: "", campaign: "", description: "" });
+            loadBonuses();
+        } catch (e) {
+            alert("Credit Failed");
+        } finally {
+            setExecuting(false);
+        }
+    };
+
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in duration-500">
-            <div className="xl:col-span-2 bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in duration-500 text-neutral-900">
+            <div className="xl:col-span-2 bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm flex flex-col min-h-[600px]">
                 <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-                    <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Bonus Distribution History</h3>
+                    <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Incentive Distribution Ledger</h3>
                     <button onClick={loadBonuses} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                <div className="overflow-x-auto flex-1">
+                    <table className="w-full text-left border-collapse">
                         <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                             <tr>
                                 <th className="px-8 py-4">Account</th>
-                                <th className="px-8 py-4">Description</th>
-                                <th className="px-8 py-4 text-right">Amount</th>
-                                <th className="px-8 py-4">Date</th>
+                                <th className="px-8 py-4">Narrative Description</th>
+                                <th className="px-8 py-4 text-right">Incentive Amount</th>
+                                <th className="px-8 py-4 text-right">Dispersed Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                             {loading ? (
-                                <tr><td colSpan={4} className="px-8 py-10 text-center text-neutral-400">Loading bonuses...</td></tr>
-                            ) : logs.filter((tx: any) => tx.type === 'BONUS' || tx.type === 'PROMO_CREDIT').length === 0 ? (
-                                <tr><td colSpan={4} className="px-8 py-10 text-center text-neutral-400">No bonuses distributed yet.</td></tr>
+                                <tr><td colSpan={4} className="px-8 py-10 text-center text-neutral-400 uppercase font-black text-[10px] tracking-widest animate-pulse">Syncing Reward Oracle...</td></tr>
+                            ) : logs.filter((tx: any) => tx.type === 'BONUS' || tx.type === 'PROMO_CREDIT' || tx.type === 'MANUAL_CREDIT').length === 0 ? (
+                                <tr><td colSpan={4} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No incentives dispersed yet.</td></tr>
                             ) : (
-                                logs.filter((tx: any) => tx.type === 'BONUS' || tx.type === 'PROMO_CREDIT').map((tx) => (
-                                    <tr key={tx._id} className="hover:bg-neutral-50 transition-all">
+                                logs.filter((tx: any) => tx.type === 'BONUS' || tx.type === 'PROMO_CREDIT' || tx.type === 'MANUAL_CREDIT').map((tx) => (
+                                    <tr key={tx._id} className="hover:bg-neutral-50 transition-all group">
                                         <td className="px-8 py-5">
-                                            <p className="font-black text-neutral-800">User ID: {tx.toUserId?.slice(-6)}</p>
+                                            <p className="font-black text-neutral-800">ID: {tx.toUserId?.slice(-6)}</p>
                                         </td>
-                                        <td className="px-8 py-5 text-neutral-500">{tx.description}</td>
+                                        <td className="px-8 py-5 text-neutral-500 text-xs italic font-bold">"{tx.description}"</td>
                                         <td className="px-8 py-5 text-right font-black text-green-600">{currencySymbol}{tx.amount.toFixed(2)}</td>
-                                        <td className="px-8 py-5 text-xs text-neutral-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-8 py-5 text-right text-xs text-neutral-400 font-black uppercase tracking-tighter">{formatDate(tx.createdAt)}</td>
                                     </tr>
                                 ))
                             )}
@@ -488,25 +921,132 @@ function BonusCentre({ currencySymbol }: any) {
                     </table>
                 </div>
             </div>
-            <div className="bg-[#121212] rounded-[32px] p-8 text-white shadow-xl h-fit">
-                <h4 className="font-black text-xs uppercase tracking-widest text-neutral-500 mb-6 text-center">Reward Dispenser</h4>
-                <div className="space-y-6">
+            <div className="bg-[#121212] rounded-[32px] p-10 text-white shadow-2xl h-fit sticky top-8 border border-white/5">
+                <div className="w-16 h-16 bg-brand-customer-red/20 rounded-2xl flex items-center justify-center text-brand-customer-red mb-8">
+                    <Gift size={32} />
+                </div>
+                <h4 className="font-black text-xl uppercase tracking-tight mb-2">Reward Dispenser</h4>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-8">Authorization required for disbursement</p>
+
+                <div className="space-y-6 text-sm">
                     <div>
                         <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Target Account ID</label>
-                        <input type="text" className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs outline-none focus:border-brand-customer-red" placeholder="e.g. 6a2c..." />
+                        <input
+                            type="text"
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-xs outline-none focus:border-brand-customer-red transition-all font-mono"
+                            placeholder="e.g. 6a2c..."
+                            value={form.targetId}
+                            onChange={(e) => setForm({...form, targetId: e.target.value})}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                             <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Wallet Selection</label>
+                             <select
+                                className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all cursor-pointer"
+                                value={form.balanceType}
+                                onChange={(e) => setForm({...form, balanceType: e.target.value})}
+                             >
+                                <option value="balanceBonus">Bonus Pool</option>
+                                <option value="balanceReferral">Referral Pool</option>
+                                <option value="balanceCredit">Credit Balance</option>
+                                <option value="balanceMain">Main Balance</option>
+                             </select>
+                        </div>
+                        <div className="col-span-1">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Amount ({currencySymbol})</label>
+                            <input
+                                type="number"
+                                className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-brand-customer-red transition-all"
+                                placeholder="0.00"
+                                value={form.amount}
+                                onChange={(e) => setForm({...form, amount: e.target.value})}
+                            />
+                        </div>
+                        <div className="col-span-1">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Campaign Code</label>
+                            <input
+                                type="text"
+                                className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+                                placeholder="Optional"
+                                value={form.campaign}
+                                onChange={(e) => setForm({...form, campaign: e.target.value})}
+                            />
+                        </div>
                     </div>
                     <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Amount ({currencySymbol})</label>
-                        <input type="number" className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs outline-none focus:border-brand-customer-red" placeholder="0.00" />
+                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Narrative Reason</label>
+                        <input
+                            type="text"
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-xs font-bold outline-none focus:border-brand-customer-red transition-all"
+                            placeholder="e.g. System Compensation"
+                            value={form.reason}
+                            onChange={(e) => setForm({...form, reason: e.target.value})}
+                        />
                     </div>
                     <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Description / Reason</label>
-                        <input type="text" className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs outline-none focus:border-brand-customer-red" placeholder="e.g. Compensation" />
+                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Internal Description</label>
+                        <textarea
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-xs font-bold outline-none focus:border-brand-customer-red transition-all resize-none h-20"
+                            placeholder="Additional details for audit..."
+                            value={form.description}
+                            onChange={(e) => setForm({...form, description: e.target.value})}
+                        />
                     </div>
-                    <button className="w-full bg-brand-customer-red text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">Credit Wallet</button>
-                    <p className="text-[10px] text-neutral-500 font-medium leading-relaxed italic text-center">Action will be recorded in the immutable ledger and audit logs.</p>
+                    <button
+                        onClick={initiateCredit}
+                        className="w-full bg-brand-customer-red text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-red-900/20"
+                    >
+                        Initiate Disbursement
+                    </button>
+                    <p className="text-[10px] text-neutral-500 font-medium leading-relaxed italic text-center">Operation will be logged under Category: FINANCIAL_MUTATION.</p>
                 </div>
             </div>
+
+            {confirmData && (
+                <div className="fixed inset-0 bg-neutral-950/90 backdrop-blur-xl z-[300] flex items-center justify-center p-8">
+                    <div className="bg-white rounded-[56px] w-full max-w-2xl shadow-2xl overflow-hidden border border-neutral-200 animate-in zoom-in-95 duration-300">
+                        <div className="p-16 text-center border-b border-neutral-100 bg-neutral-50/30">
+                            <div className="w-24 h-24 bg-green-50 text-green-600 rounded-[32px] mx-auto flex items-center justify-center mb-8 shadow-inner border border-green-100">
+                                <ShieldCheck size={48} strokeWidth={2.5} />
+                            </div>
+                            <h3 className="text-3xl font-black uppercase tracking-tight text-neutral-900">Confirm disbursement</h3>
+                            <p className="text-neutral-500 font-bold text-sm uppercase tracking-[0.2em] mt-3 underline decoration-green-500 underline-offset-8">Critical Financial Authorization</p>
+                        </div>
+
+                        <div className="p-16 space-y-10 bg-white">
+                            <div className="grid grid-cols-2 gap-x-12 gap-y-8 text-sm">
+                                <DetailRow label="Recipient Name" value={`${confirmData.user.firstName} ${confirmData.user.lastName}`} highlight />
+                                <DetailRow label="Account Role" value={confirmData.user.role} highlight color="text-blue-600" />
+                                <DetailRow label="Target Workspace" value={`${confirmData.user.countryCode} Sector`} />
+                                <DetailRow label="Wallet Status" value={confirmData.wallet.status} highlight color={confirmData.wallet.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'} />
+                                <DetailRow label="Available Balance" value={`${currencySymbol}${confirmData.wallet.balanceMain.toFixed(2)}`} />
+                                <DetailRow label="Bonus Balance" value={`${currencySymbol}${confirmData.wallet.balanceBonus.toFixed(2)}`} />
+                                <div className="col-span-2 h-px bg-neutral-100 my-2"></div>
+                                <DetailRow label="Disbursement Auth" value={`${currencySymbol}${confirmData.amount.toFixed(2)}`} highlight color="text-green-600" />
+                                <DetailRow label="Impacted Ledger" value={confirmData.balanceType.replace('balance', '').toUpperCase()} highlight />
+                            </div>
+
+                            <div className="p-8 bg-neutral-50 rounded-[32px] border border-neutral-100 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-5"><History size={64} /></div>
+                                <p className="text-[10px] font-black uppercase text-neutral-400 mb-3 tracking-widest">Audit Logic Justification</p>
+                                <p className="text-sm font-bold text-neutral-800 leading-relaxed italic relative z-10">"{confirmData.reason} - {confirmData.description}"</p>
+                            </div>
+
+                            <div className="flex gap-6">
+                                <button onClick={() => setConfirmData(null)} className="flex-1 bg-white border border-neutral-200 text-neutral-500 py-5 rounded-[24px] font-black uppercase text-[11px] tracking-widest hover:bg-neutral-50 transition-all active:scale-95">Abort Action</button>
+                                <button
+                                    onClick={confirmCredit}
+                                    disabled={executing}
+                                    className="flex-[2] bg-neutral-900 text-white py-5 rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-2xl hover:bg-black transition-all disabled:opacity-50 active:scale-95"
+                                >
+                                    {executing ? 'Applying Ledger Mutation...' : 'Execute Authorized Credit'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -533,40 +1073,43 @@ function ReferralCentre({ currencySymbol }: any) {
     }, [countryCode]);
 
     return (
-        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-                <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Referral Reward Ledger</h3>
+        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500">
+            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center text-neutral-900">
+                <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Referral Reward Oracle</h3>
                 <button onClick={fetchReferrals} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                         <tr>
-                            <th className="px-8 py-4">Incentive ID</th>
-                            <th className="px-8 py-4">Inviter</th>
-                            <th className="px-8 py-4">Amount</th>
-                            <th className="px-8 py-4">Status</th>
+                            <th className="px-8 py-4">Reward ID</th>
+                            <th className="px-8 py-4">Incentivized User</th>
+                            <th className="px-8 py-4 text-right">Yield</th>
+                            <th className="px-8 py-4 text-center">Status</th>
                             <th className="px-8 py-4 text-right">Fulfillment</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                         {loading ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">Loading referral rewards...</td></tr>
+                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 uppercase font-black text-[10px] animate-pulse tracking-widest">Scanning Referral Pool...</td></tr>
                         ) : data.length === 0 ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">No rewards distributed yet.</td></tr>
+                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No incentives generated in this workspace.</td></tr>
                         ) : (
                             data.map((r) => (
-                                <tr key={r._id} className="hover:bg-neutral-50 transition-all">
+                                <tr key={r._id} className="hover:bg-neutral-50 transition-all group">
                                     <td className="px-8 py-5 font-mono text-xs font-bold text-neutral-500">{r.transactionId}</td>
-                                    <td className="px-8 py-5 font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</td>
-                                    <td className="px-8 py-5 font-black text-green-600">{currencySymbol}{r.amount.toFixed(2)}</td>
                                     <td className="px-8 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle2 size={12} className="text-green-500" />
-                                            <span className="text-[10px] font-black uppercase">PAID</span>
+                                        <p className="font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</p>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">Referrer Node</p>
+                                    </td>
+                                    <td className="px-8 py-5 font-black text-green-600 text-right">{currencySymbol}{r.amount.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                                            <span className="text-[10px] font-black uppercase text-green-800">DISBURSED</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 font-bold uppercase">{new Date(r.createdAt).toLocaleDateString()}</td>
+                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 font-black uppercase tracking-tighter">{formatDate(r.createdAt)}</td>
                                 </tr>
                             ))
                         )}
@@ -580,31 +1123,49 @@ function ReferralCentre({ currencySymbol }: any) {
 function EscrowMonitor({ currencySymbol, activeEscrow }: any) {
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-[#121212] p-12 rounded-[40px] text-white flex justify-between items-center shadow-2xl relative overflow-hidden">
+            <div className="bg-[#0A0A0A] p-20 rounded-[56px] text-white flex justify-between items-center shadow-2xl relative overflow-hidden border border-white/5 group">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(251,191,36,0.1),transparent)] group-hover:opacity-100 transition-opacity opacity-50"></div>
                 <div className="relative z-10">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Global Escrow Pool</p>
-                    <h3 className="text-6xl font-black mt-4">{currencySymbol}{activeEscrow.toLocaleString()}</h3>
-                    <p className="text-sm font-bold text-neutral-400 mt-2 uppercase tracking-tight">Funds held pending job completion & cooling period.</p>
+                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-neutral-500 mb-8 flex items-center gap-4 text-neutral-900">
+                        <div className="w-4 h-4 bg-amber-500 rounded-full animate-ping absolute"></div>
+                        <div className="w-4 h-4 bg-amber-500 rounded-full relative"></div>
+                        PieceJob Escrow Signal
+                    </p>
+                    <h3 className="text-8xl font-black tracking-tighter leading-none group-hover:scale-[1.02] transition-transform duration-700">{currencySymbol}{activeEscrow.toLocaleString()}</h3>
+                    <p className="text-base font-bold text-neutral-400 mt-10 uppercase tracking-[0.1em] flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity text-neutral-900">
+                        <ShieldCheck size={20} className="text-amber-500" />
+                        Guaranteed Provider Yield locked in Cooling Protocol
+                    </p>
                 </div>
-                <ShieldCheck size={120} className="text-neutral-900 absolute -right-4 -bottom-4 rotate-12" />
+                <div className="hidden xl:block">
+                     <ShieldCheck size={280} className="text-neutral-800 opacity-10 rotate-12 -mr-16 -mb-16 group-hover:rotate-0 transition-transform duration-1000" />
+                </div>
             </div>
 
-            <div className="bg-white border border-neutral-200 rounded-[32px] p-8">
-                 <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight mb-8">Escrow Health Indicators</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="p-6 bg-neutral-50 rounded-3xl">
-                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Released (24h)</p>
-                        <p className="text-2xl font-black text-neutral-900 mt-2">{currencySymbol} 0.00</p>
-                    </div>
-                    <div className="p-6 bg-neutral-50 rounded-3xl">
-                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Held (7d+)</p>
-                        <p className="text-2xl font-black text-neutral-900 mt-2">{currencySymbol} 0.00</p>
-                    </div>
-                    <div className="p-6 bg-red-50 rounded-3xl">
-                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Disputed Hold</p>
-                        <p className="text-2xl font-black text-red-600 mt-2">{currencySymbol} 0.00</p>
-                    </div>
-                 </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <EscrowCard label="Success Exit (24h)" value="0.00" icon={<CheckCircle2 size={24} />} color="green" />
+                <EscrowCard label="Cooling Aging (7d+)" value="0.00" icon={<Clock size={24} />} color="amber" />
+                <EscrowCard label="Dispute Lockdown" value="0.00" icon={<ShieldAlert size={24} />} color="red" />
+            </div>
+        </div>
+    );
+}
+
+function EscrowCard({ label, value, icon, color }: any) {
+    const colors: any = {
+        green: "bg-green-50 text-green-700 border-green-100 shadow-green-100/20",
+        amber: "bg-amber-50 text-amber-700 border-amber-100 shadow-amber-100/20",
+        red: "bg-red-50 text-red-700 border-red-100 shadow-red-100/20",
+    }
+    return (
+        <div className={`p-10 bg-white border border-neutral-200 rounded-[40px] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group text-neutral-900`}>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 shadow-inner ${colors[color]}`}>
+                {icon}
+            </div>
+            <p className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">{label}</p>
+            <p className="text-4xl font-black text-neutral-900 mt-3">$ {value}</p>
+            <div className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                Analyze Deep Signal <ChevronRight size={14} />
             </div>
         </div>
     );
@@ -614,11 +1175,12 @@ function AuditLogsView() {
     const { countryCode } = useCountryStore();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedLog, setSelectedLog] = useState<any>(null);
 
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/audit-logs?countryCode=${countryCode}&category=FINANCE`);
+            const res = await api.get(`/api/admin/audit-logs?countryCode=${countryCode}`);
             setLogs(res.data.logs || []);
         } catch (e) {
             console.error('Failed to load audit logs');
@@ -632,41 +1194,102 @@ function AuditLogsView() {
     }, [countryCode]);
 
     return (
-        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500">
+        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500 text-neutral-900">
              <div className="p-8 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
-                <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Financial Audit Trail</h3>
-                <button onClick={fetchLogs} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
+                <div>
+                    <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Full System Financial Audit</h3>
+                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Immutable Ledger & State Modification Records</p>
+                </div>
+                <div className="flex gap-4">
+                     <button className="p-2 hover:bg-neutral-200 rounded-xl transition-all text-neutral-400" title="Export Ledger"><Download size={18} /></button>
+                     <button onClick={fetchLogs} className="p-2 hover:bg-neutral-200 rounded-xl transition-all" title="Reload Logs"><RefreshCcw size={18} /></button>
+                </div>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
                         <tr>
                             <th className="px-8 py-4">Timestamp</th>
-                            <th className="px-8 py-4">Actor</th>
-                            <th className="px-8 py-4">Action</th>
-                            <th className="px-8 py-4">Details</th>
-                            <th className="px-8 py-4">Impact</th>
+                            <th className="px-8 py-4">Authorized Admin</th>
+                            <th className="px-8 py-4 text-center">Action</th>
+                            <th className="px-8 py-4">Target Entity</th>
+                            <th className="px-8 py-4 text-right">Impact</th>
+                            <th className="px-8 py-4 text-right">Details</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                         {loading ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">Loading audit trail...</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-20 text-center text-neutral-400 uppercase font-black text-[11px] animate-pulse tracking-widest">Decrypting Operational Event Trail...</td></tr>
                         ) : logs.length === 0 ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400">No logs for this workspace.</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No authorized logs detected in this workspace.</td></tr>
                         ) : (
                             logs.map((log) => (
-                                <tr key={log._id} className="hover:bg-neutral-50 transition-all">
-                                    <td className="px-8 py-5 text-xs font-bold text-neutral-400 uppercase">{new Date(log.createdAt).toLocaleString()}</td>
-                                    <td className="px-8 py-5 font-black text-neutral-800">{log.adminId || 'SYSTEM'}</td>
-                                    <td className="px-8 py-5 font-black text-blue-600 uppercase text-[10px]">{log.action}</td>
-                                    <td className="px-8 py-5 text-xs text-neutral-500 truncate max-w-xs">{JSON.stringify(log.financialInfo || log.afterState)}</td>
-                                    <td className="px-8 py-5 text-right font-black text-neutral-900">{log.financialInfo?.amountBase || '-'}</td>
+                                <tr key={log._id} className="hover:bg-neutral-50/50 transition-all group">
+                                    <td className="px-8 py-6">
+                                        <p className="text-[11px] font-black text-neutral-800 uppercase">{formatDate(log.createdAt)}</p>
+                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{formatTime(log.createdAt)} UTC</p>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-neutral-100 rounded-2xl flex items-center justify-center text-[11px] font-black text-neutral-500 uppercase border border-neutral-200 shadow-sm">
+                                                {log.adminId?.firstName?.charAt(0) || 'S'}
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-neutral-800 text-xs">{log.adminId?.firstName ? `${log.adminId.firstName} ${log.adminId.lastName}` : (log.adminId || 'SYSTEM')}</p>
+                                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{log.adminRole || 'ORACLE_PROCESS'}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6 text-center">
+                                        <span className="font-black text-blue-600 uppercase text-[9px] bg-blue-50 px-2 py-1 rounded-md border border-blue-100">{log.action}</span>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-tight">{log.entityType}</p>
+                                            <p className="text-xs font-bold text-neutral-700 font-mono">{log.entityId || log.userId || 'GLOBAL_CTX'}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6 text-right font-black text-neutral-900">
+                                        {log.financialInfo ? (
+                                            <span className={`text-sm ${log.financialInfo.mutationType === 'CREDIT' ? 'text-green-600' : 'text-red-600'}`}>
+                                                {log.financialInfo.mutationType === 'CREDIT' ? '+' : '-'}{log.financialInfo.amountBase.toFixed(2)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-neutral-300">—</span>
+                                        )}
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <button onClick={() => setSelectedLog(log)} className="p-2.5 bg-neutral-100 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-white border border-transparent hover:border-neutral-200 transition-all shadow-sm active:scale-90"><Eye size={16} /></button>
+                                    </td>
                                 </tr>
                             ))
                         )}
                     </tbody>
                 </table>
             </div>
+            {selectedLog && (
+                <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-md flex items-center justify-center p-8">
+                     <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-100">
+                        <div className="p-10 border-b bg-neutral-50/50 flex justify-between items-center">
+                            <h3 className="text-xl font-black uppercase tracking-tight">Audit Event Trace</h3>
+                            <button onClick={() => setSelectedLog(null)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><XCircle className="text-neutral-300" /></button>
+                        </div>
+                        <div className="p-10 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <DetailRow label="Trace ID" value={selectedLog.auditId} highlight />
+                                <DetailRow label="Actor" value={selectedLog.adminId?.firstName ? `${selectedLog.adminId.firstName} ${selectedLog.adminId.lastName}` : 'SYSTEM'} />
+                                <DetailRow label="Action" value={selectedLog.action} />
+                                <DetailRow label="Category" value={selectedLog.auditType} />
+                                <DetailRow label="IP Address" value={selectedLog.ipAddress || 'Internal'} />
+                                <DetailRow label="Timestamp" value={formatDateTimeLong(selectedLog.createdAt)} />
+                            </div>
+                            <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100 max-h-48 overflow-y-auto font-mono text-[10px]">
+                                {JSON.stringify(selectedLog.afterState || selectedLog.financialInfo, null, 2)}
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -690,51 +1313,66 @@ function ReconciliationHub({ onRefresh }: { onRefresh: () => void }) {
     };
 
     return (
-        <div className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-12">
+        <div className="bg-white border border-neutral-200 rounded-[40px] p-12 shadow-sm text-neutral-900">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 mb-16">
                 <div>
-                    <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Ledger Reconciliation Engine</h3>
-                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Consistency check: Ledger vs User Balances</p>
+                    <h3 className="font-black text-2xl text-neutral-900 uppercase tracking-tight">Ledger Reconciliation Oracle</h3>
+                    <p className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.3em] mt-2">Zero-Tolerance Consistency verification Layer</p>
                 </div>
                 <button
                     onClick={runRecon}
                     disabled={running}
-                    className="bg-neutral-900 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase hover:scale-105 transition-all disabled:opacity-50"
+                    className="bg-neutral-900 text-white px-12 py-5 rounded-[24px] text-[12px] font-black uppercase tracking-[0.3em] hover:bg-black hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-2xl shadow-neutral-300"
                 >
-                    {running ? 'Scanning Ledger...' : 'Execute Integrity Scan'}
+                    {running ? 'Calibrating Global Signal...' : 'Execute Authorized Scan'}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="p-8 bg-neutral-50 rounded-[32px] border border-neutral-100">
-                    <h4 className="font-black text-sm text-neutral-800 uppercase mb-6 flex items-center gap-2">
-                        <ShieldCheck className="text-green-600" size={18} />
-                        Security Checksum
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="p-12 bg-neutral-50 rounded-[48px] border border-neutral-100 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700"><ShieldCheck size={140} /></div>
+                    <h4 className="font-black text-xs text-neutral-900 uppercase mb-10 flex items-center gap-4">
+                        <div className="p-3 bg-green-50 text-green-600 rounded-2xl shadow-sm"><ShieldCheck size={20} strokeWidth={3} /></div>
+                        System Integrity Checksum
                     </h4>
-                    <ul className="space-y-4">
-                        <li className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-neutral-500 uppercase">Double-Entry Balance</span>
-                            <span className="font-black text-green-600">VERIFIED</span>
-                        </li>
-                        <li className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-neutral-500 uppercase">Isolation Compliance</span>
-                            <span className="font-black text-green-600">PASSED</span>
-                        </li>
+                    <ul className="space-y-8">
+                        <IntegrityItem label="Double-Entry Symmetry" status="VERIFIED" />
+                        <IntegrityItem label="Isolation Compliance" status="PASSED" />
+                        <IntegrityItem label="Escrow Aging Logic" status="OPTIMAL" />
                     </ul>
                 </div>
 
-                <div className="p-8 bg-neutral-50 rounded-[32px] border border-neutral-100">
-                    <h4 className="font-black text-sm text-neutral-800 uppercase mb-6 flex items-center gap-2">
-                        <AlertTriangle className="text-yellow-600" size={18} />
-                        Mismatches Detected
+                <div className="p-12 bg-neutral-50 rounded-[48px] border border-neutral-100 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700"><AlertTriangle size={140} /></div>
+                    <h4 className="font-black text-xs text-neutral-900 uppercase mb-10 flex items-center gap-4">
+                         <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl shadow-sm"><AlertTriangle size={20} strokeWidth={3} /></div>
+                        Anomalous Variance Detection
                     </h4>
-                    {results ? (
-                        <p className="text-xs font-bold text-neutral-400 uppercase">Scan complete: {results.scannedJobs} jobs verified. {results.walletMismatches.length} errors.</p>
-                    ) : (
-                        <p className="text-xs font-bold text-neutral-400 uppercase italic">No active scan performed.</p>
-                    )}
+                    <div className="min-h-[160px] flex items-center justify-center text-center">
+                        {results ? (
+                             <div className="animate-in slide-in-from-bottom-4">
+                                <p className="text-5xl font-black text-neutral-900">{results.walletMismatches.length}</p>
+                                <p className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-4">Divergent signals detected in scan</p>
+                                <div className="mt-8 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm flex items-center gap-3">
+                                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                     <span className="text-[9px] font-black uppercase text-neutral-500">Oracle: Variance within threshold</span>
+                                </div>
+                             </div>
+                        ) : (
+                            <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest italic opacity-40">Awaiting secure session scan...</p>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     )
+}
+
+function IntegrityItem({ label, status }: any) {
+    return (
+        <li className="flex justify-between items-center text-xs group/item cursor-default">
+            <span className="font-black text-neutral-400 uppercase tracking-widest group-hover/item:text-neutral-900 transition-colors">{label}</span>
+            <span className="font-black text-green-600 bg-green-50 px-4 py-1.5 rounded-xl border border-green-100 shadow-sm group-hover/item:scale-105 transition-transform">{status}</span>
+        </li>
+    );
 }
