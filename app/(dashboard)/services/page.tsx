@@ -70,19 +70,27 @@ export default function ServiceCatalog() {
       const formData = new FormData(e.currentTarget);
       const data = Object.fromEntries(formData.entries());
 
-      // Handle array for equipment
+      // FORCE workspace isolation: If we are in a country-specific workspace, save to that country.
+      // If editing a GLOBAL record from a specific country workspace, create a NEW record for that country.
+      const targetCountryCode = (countryCode === 'GLOBAL') ? (data.countryCode || 'GLOBAL') : countryCode;
+
       const payload = {
           ...data,
           equipmentRequired: (data.equipmentRequired as string).split(',').map(i => i.trim()).filter(i => i),
           isActive: data.isActive === 'on',
-          countryCode: data.countryCode || 'GLOBAL',
+          countryCode: targetCountryCode,
           bookingFee: parseFloat(data.bookingFee as string) || 0
       };
 
       try {
-          if (currentService?._id) {
+          // If we are in a specific workspace and editing a GLOBAL record, we must POST (create override)
+          // instead of PATCHing the global template.
+          const isGlobalTemplate = currentService?.countryCode === 'GLOBAL' && countryCode !== 'GLOBAL';
+
+          if (currentService?._id && !isGlobalTemplate) {
               await api.patch(`/api/admin/services/${currentService._id}`, payload);
           } else {
+              // Creating new service or overriding a global template in a workspace
               await api.post('/api/admin/services', payload);
           }
           setShowModal(false);
@@ -314,7 +322,13 @@ export default function ServiceCatalog() {
                           <SelectGroup label="Verification Requirement" name="verificationLevel" options={VERIFICATION_LEVELS.map(l => ({ value: l, label: l.replace('_', ' ') }))} defaultValue={currentService?.verificationLevel} />
                           <FormGroup label="Booking Fee (Workspace Currency)" name="bookingFee" type="number" step="0.01" defaultValue={currentService?.bookingFee} placeholder="Leave blank for no fee" />
                           <FormGroup label="Equipment (Comma separated)" name="equipmentRequired" defaultValue={currentService?.equipmentRequired?.join(', ')} />
-                          <FormGroup label="Target Country (Default: GLOBAL)" name="countryCode" defaultValue={currentService?.countryCode || 'GLOBAL'} />
+                          <FormGroup
+                            label="Target Workspace"
+                            name="countryCode"
+                            defaultValue={countryCode === 'GLOBAL' ? (currentService?.countryCode || 'GLOBAL') : countryCode}
+                            readOnly={countryCode !== 'GLOBAL'}
+                            placeholder="e.g. ZA, KE, GLOBAL"
+                          />
                           <div className="col-span-2">
                               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Service Details (Instructions & Scope)</label>
                               <textarea
@@ -382,7 +396,12 @@ function ServiceCard({ service, categoryName, onToggle, onEdit, onDelete }: any)
         <div className={`bg-white border rounded-[40px] p-8 shadow-sm group transition-all flex flex-col justify-between h-[380px] ${service.isActive ? 'border-neutral-200 hover:border-brand-customer-red/30' : 'border-neutral-100 opacity-60'}`}>
             <div>
                 <div className="flex justify-between items-start mb-6">
-                    <span className="bg-neutral-50 px-4 py-2 rounded-2xl font-mono text-[10px] font-black text-neutral-400 group-hover:text-brand-customer-red transition-all uppercase tracking-tighter border border-neutral-100">{service.code}</span>
+                    <div className="flex gap-2">
+                        <span className="bg-neutral-50 px-4 py-2 rounded-2xl font-mono text-[10px] font-black text-neutral-400 group-hover:text-brand-customer-red transition-all uppercase tracking-tighter border border-neutral-100">{service.code}</span>
+                        <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase border ${service.countryCode === 'GLOBAL' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
+                            {service.countryCode}
+                        </span>
+                    </div>
                     <div className="flex gap-1">
                         <button onClick={onEdit} className="p-2 text-neutral-300 hover:text-neutral-900 transition-all"><Edit size={16} /></button>
                         <button onClick={onToggle} className={`p-2 transition-all ${service.isActive ? 'text-brand-provider-green' : 'text-neutral-300'}`}>
