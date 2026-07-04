@@ -1594,11 +1594,11 @@ function CommissionSettingsView() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                <SettingInput label="Default Commission %" value={settings.platformCommissionPercent} onChange={(v) => setSettings({...settings, platformCommissionPercent: parseFloat(v)})} />
-                <SettingInput label="Suspension Threshold" value={settings.commissionSuspensionThreshold} onChange={(v) => setSettings({...settings, commissionSuspensionThreshold: parseFloat(v)})} />
-                <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
-                <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v) => setSettings({...settings, autoSuspendEnabled: v})} />
-                <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v) => setSettings({...settings, autoUnsuspendEnabled: v})} />
+                <SettingInput label="Default Commission %" value={settings.platformCommissionPercent} onChange={(v: string) => setSettings({...settings, platformCommissionPercent: parseFloat(v)})} />
+                <SettingInput label="Suspension Threshold" value={settings.commissionSuspensionThreshold} onChange={(v: string) => setSettings({...settings, commissionSuspensionThreshold: parseFloat(v)})} />
+                <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v: string) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
+                <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoSuspendEnabled: v})} />
+                <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoUnsuspendEnabled: v})} />
             </div>
 
             <div className="bg-white/5 rounded-[32px] p-8 border border-white/10">
