@@ -443,6 +443,7 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                                 <div className="space-y-4">
                                     <TimeRow label="Requested" time={job.createdAt} />
                                     <TimeRow label="Accepted" time={job.acceptedAt} />
+                                    <TimeRow label="Price Accepted" time={job.priceAcceptedAt} />
                                     <TimeRow label="Provider Arrived" time={job.arrivedAt} />
                                     <TimeRow label="Work Started" time={job.startedAt} />
                                     <TimeRow label="Completed" time={job.completedAt} />
@@ -578,6 +579,7 @@ function StatCard({ title, value, icon, color }: any) {
 function getStatusColor(status: string) {
     switch (status) {
         case 'BROADCASTED': return 'bg-purple-50 text-purple-600';
+        case 'PROVIDER_ACCEPTED': return 'bg-yellow-50 text-yellow-600';
         case 'ACCEPTED': return 'bg-blue-50 text-blue-600';
         case 'EN_ROUTE': return 'bg-orange-50 text-orange-600';
         case 'ARRIVED': return 'bg-green-50 text-green-600';
