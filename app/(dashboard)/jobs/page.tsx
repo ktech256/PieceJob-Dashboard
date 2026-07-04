@@ -305,6 +305,10 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
 
     const { job, ledger, calls, auditLogs, providerProfile, reviews, chatCount } = data;
 
+    const getCurrency = (j: any) => {
+        return j.pricingSnapshot?.currencyCode || 'USD';
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-neutral-50 rounded-[40px] w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-8 duration-300">
@@ -345,6 +349,10 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                                         <span className="font-black">{formatCurrency(job.serviceFee || 0, job.pricingSnapshot?.currencyCode || 'USD')}</span>
                                     </div>
                                     <div className="flex justify-between">
+                                        <span className="text-[10px] font-black uppercase text-neutral-400">Agreed Price</span>
+                                        <span className="font-black text-blue-600">{job.agreedPrice ? formatCurrency(job.agreedPrice, job.pricingSnapshot?.currencyCode || 'USD') : 'NEGOTIATING...'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
                                         <span className="text-[10px] font-black uppercase text-neutral-400">Payment Status</span>
                                         <span className="text-[10px] font-black uppercase px-2 py-1 bg-neutral-100 rounded-lg">{job.paymentStatus}</span>
                                     </div>
@@ -354,7 +362,7 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                                     </div>
                                     <div className="border-t border-dashed pt-4 flex justify-between items-end">
                                         <span className="text-[10px] font-black uppercase text-neutral-900">Total Value</span>
-                                        <span className="text-xl font-black text-emerald-600">{formatCurrency(job.bookingFee + (job.serviceFee || 0), job.pricingSnapshot?.currencyCode || 'USD')}</span>
+                                        <span className="text-xl font-black text-emerald-600">{formatCurrency(job.agreedPrice || (job.bookingFee + (job.serviceFee || 0)), job.pricingSnapshot?.currencyCode || 'USD')}</span>
                                     </div>
                                 </div>
                             </DetailCard>
@@ -443,7 +451,14 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                                 <div className="space-y-4">
                                     <TimeRow label="Requested" time={job.createdAt} />
                                     <TimeRow label="Accepted" time={job.acceptedAt} />
-                                    <TimeRow label="Price Accepted" time={job.priceAcceptedAt} />
+                                    {job.negotiationTimeline?.map((ev: any, idx: number) => (
+                                        <TimeRow
+                                            key={idx}
+                                            label={ev.event.replace('_', ' ')}
+                                            time={ev.timestamp}
+                                            subValue={ev.metadata?.amount ? `Amount: ${formatCurrency(ev.metadata.amount, getCurrency(job))}` : undefined}
+                                        />
+                                    ))}
                                     <TimeRow label="Provider Arrived" time={job.arrivedAt} />
                                     <TimeRow label="Work Started" time={job.startedAt} />
                                     <TimeRow label="Completed" time={job.completedAt} />
@@ -556,12 +571,15 @@ function DetailCard({ title, icon, children }: any) {
     )
 }
 
-function TimeRow({ label, time, highlight }: any) {
+function TimeRow({ label, time, highlight, subValue }: any) {
     if (!time) return null;
     return (
-        <div className="flex justify-between">
-            <span className={`text-[10px] font-black uppercase ${highlight ? 'text-red-500' : 'text-neutral-400'}`}>{label}</span>
-            <span className="text-[10px] font-bold font-mono">{formatDateTime(time)}</span>
+        <div className="flex justify-between items-start">
+            <div className="flex flex-col">
+                <span className={`text-[10px] font-black uppercase ${highlight ? 'text-red-500' : 'text-neutral-400'}`}>{label}</span>
+                {subValue && <span className="text-[9px] font-bold text-emerald-600">{subValue}</span>}
+            </div>
+            <span className="text-[10px] font-bold font-mono text-neutral-500">{formatDateTime(time)}</span>
         </div>
     )
 }
