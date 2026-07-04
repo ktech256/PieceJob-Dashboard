@@ -123,6 +123,7 @@ export default function FinanceControlCentre() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard size={14} /> },
+    { id: "commissions", label: "Commissions", icon: <Coins size={14} /> },
     { id: "customers", label: "Customers", icon: <User size={14} /> },
     { id: "providers", label: "Providers", icon: <HardHat size={14} /> },
     { id: "ledger", label: "Ledger", icon: <History size={14} /> },
@@ -175,6 +176,7 @@ export default function FinanceControlCentre() {
         </div>
       )}
 
+      {activeTab === "commissions" && <CommissionModule currencySymbol={stats.currencySymbol} />}
       {activeTab === "customers" && <WalletList role="CUSTOMER" currencySymbol={stats.currencySymbol} />}
       {activeTab === "providers" && <WalletList role="PROVIDER" currencySymbol={stats.currencySymbol} />}
       {activeTab === "ledger" && <LedgerExplorer currencySymbol={stats.currencySymbol} />}
@@ -1414,5 +1416,247 @@ function IntegrityItem({ label, status }: any) {
             <span className="font-black text-neutral-400 uppercase tracking-widest group-hover/item:text-neutral-900 transition-colors">{label}</span>
             <span className="font-black text-green-600 bg-green-50 px-4 py-1.5 rounded-xl border border-green-100 shadow-sm group-hover/item:scale-105 transition-transform">{status}</span>
         </li>
+    );
+}
+
+function CommissionModule({ currencySymbol }: any) {
+    const { countryCode } = useCountryStore();
+    const [stats, setStats] = useState<any>(null);
+    const [records, setRecords] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [subTab, setSubTab] = useState("dashboard");
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [statsRes, recordsRes] = await Promise.all([
+                api.get(`/api/admin/finance/commissions/overview?countryCode=${countryCode}`),
+                api.get(`/api/admin/finance/commissions/records?countryCode=${countryCode}`)
+            ]);
+            setStats(statsRes.data.stats);
+            setRecords(recordsRes.data.data);
+        } catch (e) {
+            console.error("Failed to fetch commission data");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (countryCode) fetchData();
+    }, [countryCode]);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex gap-4 border-b border-neutral-100 pb-4">
+                {["dashboard", "records", "settings"].map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setSubTab(t)}
+                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                            subTab === t ? 'bg-neutral-900 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-900'
+                        }`}
+                    >
+                        {t}
+                    </button>
+                ))}
+            </div>
+
+            {subTab === "dashboard" && stats && (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <FinanceCard label="Outstanding" value={`${currencySymbol}${stats.outstandingCommission?.toFixed(2)}`} sub="Total Owed" color="red" />
+                        <FinanceCard label="Today" value={`${currencySymbol}${stats.collectedToday?.toFixed(2)}`} sub="Collected" color="green" />
+                        <FinanceCard label="This Week" value={`${currencySymbol}${stats.collectedThisWeek?.toFixed(2)}`} sub="Collected" color="emerald" />
+                        <FinanceCard label="This Month" value={`${currencySymbol}${stats.collectedThisMonth?.toFixed(2)}`} sub="Collected" color="indigo" />
+                        <FinanceCard label="Credits" value={`${currencySymbol}${stats.bookingFeeCredits?.toFixed(2)}`} sub="Booking Fees" color="blue" />
+                        <FinanceCard label="Waived" value={`${currencySymbol}${stats.waivedCommission?.toFixed(2)}`} sub="Total Waived" color="amber" />
+                    </div>
+
+                    <div className="bg-white border border-neutral-200 rounded-[32px] p-8">
+                        <h3 className="font-black text-lg uppercase tracking-tight mb-6">Top Owing Providers</h3>
+                        <div className="space-y-4">
+                            {stats.topOwingProviders?.map((p: any) => (
+                                <div key={p._id} className="flex justify-between items-center p-4 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-neutral-400 border border-neutral-200 shadow-sm">
+                                            {p.userId?.firstName?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-sm">{p.userId?.firstName} {p.userId?.lastName}</p>
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase">{p.userId?.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-black text-red-600">{currencySymbol}{p.outstandingCommission?.toFixed(2)}</p>
+                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${p.isSuspended ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                            {p.isSuspended ? 'Suspended' : 'Active'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {subTab === "records" && (
+                <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                                <tr>
+                                    <th className="px-8 py-4">Job / Service</th>
+                                    <th className="px-8 py-4">Provider</th>
+                                    <th className="px-8 py-4 text-right">Price</th>
+                                    <th className="px-8 py-4 text-right">Commission (%)</th>
+                                    <th className="px-8 py-4 text-right">Credit</th>
+                                    <th className="px-8 py-4 text-right">Outstanding</th>
+                                    <th className="px-8 py-4 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-50 text-sm font-medium">
+                                {records.map((r) => (
+                                    <tr key={r._id} className="hover:bg-neutral-50 transition-all">
+                                        <td className="px-8 py-5">
+                                            <p className="font-black text-neutral-800">{r.jobId?.serviceName || 'Service'}</p>
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">Job ID: {r.jobId?._id?.slice(-6)}</p>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <p className="font-black text-neutral-800">{r.providerId?.firstName} {r.providerId?.lastName}</p>
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{r.providerId?.email}</p>
+                                        </td>
+                                        <td className="px-8 py-5 text-right font-black">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</td>
+                                        <td className="px-8 py-5 text-right text-neutral-500">{currencySymbol}{r.commissionAmount?.toFixed(2)} ({r.commissionPercentage}%)</td>
+                                        <td className="px-8 py-5 text-right text-green-600">-{currencySymbol}{r.bookingFeeCredit?.toFixed(2)}</td>
+                                        <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.outstandingBalance?.toFixed(2)}</td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${
+                                                r.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                                                r.status === 'WAIVED' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>{r.status}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {subTab === "settings" && <CommissionSettingsView />}
+        </div>
+    );
+}
+
+function CommissionSettingsView() {
+    const { countryCode } = useCountryStore();
+    const [settings, setSettings] = useState<any>(null);
+    const [saving, setExecuting] = useState(false);
+
+    useEffect(() => {
+        const load = async () => {
+            const res = await api.get(`/api/admin/settings?countryCode=${countryCode}`);
+            setSettings(res.data.settings);
+        };
+        if (countryCode) load();
+    }, [countryCode]);
+
+    const handleSave = async () => {
+        setExecuting(true);
+        try {
+            await api.post(`/api/admin/settings`, { ...settings, countryCode });
+            alert("Settings saved");
+        } catch (e) {
+            alert("Save failed");
+        } finally {
+            setExecuting(false);
+        }
+    };
+
+    if (!settings) return null;
+
+    return (
+        <div className="bg-[#121212] rounded-[40px] p-12 text-white border border-white/5 space-y-10">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Commission Protocol Config</h3>
+                    <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2">Operational thresholds and governance</p>
+                </div>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-brand-provider-green text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    {saving ? 'Saving...' : 'Deploy Changes'}
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <SettingInput label="Default Commission %" value={settings.platformCommissionPercent} onChange={(v) => setSettings({...settings, platformCommissionPercent: parseFloat(v)})} />
+                <SettingInput label="Suspension Threshold" value={settings.commissionSuspensionThreshold} onChange={(v) => setSettings({...settings, commissionSuspensionThreshold: parseFloat(v)})} />
+                <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
+                <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v) => setSettings({...settings, autoSuspendEnabled: v})} />
+                <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v) => setSettings({...settings, autoUnsuspendEnabled: v})} />
+            </div>
+
+            <div className="bg-white/5 rounded-[32px] p-8 border border-white/10">
+                <h4 className="text-xs font-black uppercase mb-6 text-neutral-400">Voucher Vendor Access Control</h4>
+                <div className="flex gap-4">
+                    {["OTT", "BLUE", "1VOUCHER"].map(v => {
+                        const isEnabled = settings.voucherVendors?.find((vv: any) => vv.code === v)?.isEnabled ?? true;
+                        return (
+                            <button
+                                key={v}
+                                onClick={() => {
+                                    const vendors = [...(settings.voucherVendors || [])];
+                                    const idx = vendors.findIndex(vv => vv.code === v);
+                                    if (idx > -1) vendors[idx].isEnabled = !isEnabled;
+                                    else vendors.push({ name: v, code: v, isEnabled: !isEnabled });
+                                    setSettings({...settings, voucherVendors: vendors});
+                                }}
+                                className={`px-6 py-4 rounded-2xl border transition-all text-[10px] font-black uppercase ${
+                                    isEnabled ? 'bg-brand-provider-green/10 border-brand-provider-green text-brand-provider-green' : 'bg-neutral-800 border-neutral-700 text-neutral-500'
+                                }`}
+                            >
+                                {v} {isEnabled ? 'ENABLED' : 'DISABLED'}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SettingInput({ label, value, onChange }: any) {
+    return (
+        <div>
+            <label className="text-[9px] font-black uppercase text-neutral-500 ml-1 tracking-widest">{label}</label>
+            <input
+                type="number"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full mt-3 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-xs font-black outline-none focus:border-brand-provider-green transition-all"
+            />
+        </div>
+    );
+}
+
+function SettingToggle({ label, value, onChange }: any) {
+    return (
+        <div className="flex justify-between items-center bg-white/5 border border-white/10 rounded-[32px] px-8 py-6">
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-widest">{label}</p>
+                <p className="text-[8px] font-bold text-neutral-500 uppercase mt-1">Automatic System Action</p>
+            </div>
+            <button
+                onClick={() => onChange(!value)}
+                className={`w-14 h-8 rounded-full transition-all relative ${value ? 'bg-brand-provider-green' : 'bg-neutral-700'}`}
+            >
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${value ? 'right-1' : 'left-1'}`}></div>
+            </button>
+        </div>
     );
 }
