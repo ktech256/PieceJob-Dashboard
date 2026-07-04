@@ -78,6 +78,8 @@ export default function ServiceCatalog() {
           ...data,
           equipmentRequired: (data.equipmentRequired as string).split(',').map(i => i.trim()).filter(i => i),
           isActive: data.isActive === 'on',
+          photoSharingRequired: data.photoSharingRequired === 'on',
+          priceNegotiationRequired: data.priceNegotiationRequired === 'on',
           countryCode: targetCountryCode,
           bookingFee: parseFloat(data.bookingFee as string) || 0
       };
@@ -342,6 +344,14 @@ export default function ServiceCatalog() {
                           <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                                 <input type="checkbox" name="isActive" defaultChecked={currentService ? currentService.isActive : true} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
                                 <label className="text-xs font-black text-neutral-800 uppercase">Service Active</label>
+                          </div>
+                          <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                                <input type="checkbox" name="photoSharingRequired" defaultChecked={currentService?.photoSharingRequired} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+                                <label className="text-xs font-black text-neutral-800 uppercase">Photos Required</label>
+                          </div>
+                          <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                                <input type="checkbox" name="priceNegotiationRequired" defaultChecked={currentService?.priceNegotiationRequired} className="w-5 h-5 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+                                <label className="text-xs font-black text-neutral-800 uppercase">Negotiation Required</label>
                           </div>
                       </div>
                       <div className="pt-4">

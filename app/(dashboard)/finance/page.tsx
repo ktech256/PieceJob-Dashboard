@@ -216,6 +216,7 @@ function WalletList({ role, currencySymbol }: any) {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [modalType, setModalType] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   const fetchWallets = async () => {
     setLoading(true);
@@ -1425,6 +1426,10 @@ function CommissionModule({ currencySymbol }: any) {
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [subTab, setSubTab] = useState("dashboard");
+    const [modalType, setModalType] = useState<string | null>(null);
+    const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+    const tabs = ["dashboard", "records", "vouchers", "settings"];
 
     const fetchData = async () => {
         setLoading(true);
@@ -1449,7 +1454,7 @@ function CommissionModule({ currencySymbol }: any) {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex gap-4 border-b border-neutral-100 pb-4">
-                {["dashboard", "records", "settings"].map(t => (
+                {tabs.map(t => (
                     <button
                         key={t}
                         onClick={() => setSubTab(t)}
@@ -1473,28 +1478,85 @@ function CommissionModule({ currencySymbol }: any) {
                         <FinanceCard label="Waived" value={`${currencySymbol}${stats.waivedCommission?.toFixed(2)}`} sub="Total Waived" color="amber" />
                     </div>
 
-                    <div className="bg-white border border-neutral-200 rounded-[32px] p-8">
-                        <h3 className="font-black text-lg uppercase tracking-tight mb-6">Top Owing Providers</h3>
-                        <div className="space-y-4">
-                            {stats.topOwingProviders?.map((p: any) => (
-                                <div key={p._id} className="flex justify-between items-center p-4 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-neutral-400 border border-neutral-200 shadow-sm">
-                                            {p.userId?.firstName?.charAt(0)}
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        <div className="xl:col-span-2 bg-white border border-neutral-200 rounded-[32px] p-8">
+                            <h3 className="font-black text-lg uppercase tracking-tight mb-6">Top Owing Providers</h3>
+                            <div className="space-y-4">
+                                {stats.topOwingProviders?.map((p: any) => (
+                                    <div key={p._id} className="flex justify-between items-center p-4 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            {p.userId?.profilePhoto ? (
+                                                <img src={p.userId.profilePhoto} className="w-10 h-10 rounded-xl object-cover" alt="" />
+                                            ) : (
+                                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-neutral-400 border border-neutral-200 shadow-sm">
+                                                    {p.userId?.firstName?.charAt(0)}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="font-black text-sm">{p.userId?.firstName} {p.userId?.lastName}</p>
+                                                <p className="text-[10px] font-bold text-neutral-400 uppercase">{p.userId?.email}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-black text-sm">{p.userId?.firstName} {p.userId?.lastName}</p>
-                                            <p className="text-[10px] font-bold text-neutral-400 uppercase">{p.userId?.email}</p>
+                                        <div className="text-right">
+                                            <p className="font-black text-red-600">{currencySymbol}{p.outstandingCommission?.toFixed(2)}</p>
+                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${p.isSuspended ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                {p.isSuspended ? 'Suspended' : 'Active'}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-black text-red-600">{currencySymbol}{p.outstandingCommission?.toFixed(2)}</p>
-                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${p.isSuspended ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                            {p.isSuspended ? 'Suspended' : 'Active'}
-                                        </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-[#121212] rounded-[32px] p-8 text-white space-y-8">
+                            <div>
+                                <h3 className="text-lg font-black uppercase tracking-tight">Bulk Operations</h3>
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase mt-1">Marketplace Governance</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="p-6 bg-white/5 border border-white/10 rounded-[24px]">
+                                    <label className="text-[9px] font-black uppercase text-neutral-500 tracking-widest">Suspension Threshold</label>
+                                    <div className="flex gap-2 mt-2">
+                                        <input
+                                            type="number"
+                                            id="bulk-threshold"
+                                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-black outline-none focus:border-brand-customer-red w-full"
+                                            placeholder="100.00"
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                const el = document.getElementById('bulk-threshold') as HTMLInputElement;
+                                                const val = parseFloat(el.value);
+                                                if (!val) return alert("Enter threshold");
+                                                if (!confirm(`Suspend all providers owing more than ${val}?`)) return;
+                                                try {
+                                                    await api.post('/api/admin/finance/commissions/bulk-suspend', { threshold: val, countryCode });
+                                                    alert("Bulk suspension completed");
+                                                    fetchData();
+                                                } catch (e) { alert("Failed"); }
+                                            }}
+                                            className="bg-brand-customer-red text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap"
+                                        >
+                                            Suspend
+                                        </button>
                                     </div>
                                 </div>
-                            ))}
+
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("Unsuspend ALL currently suspended providers in this workspace?")) return;
+                                        try {
+                                            await api.post('/api/admin/finance/commissions/bulk-unsuspend', { countryCode });
+                                            alert("Bulk unsuspension completed");
+                                            fetchData();
+                                        } catch (e) { alert("Failed"); }
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 text-neutral-400 py-4 rounded-[24px] text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-neutral-900 transition-all"
+                                >
+                                    Unsuspend All
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1517,27 +1579,54 @@ function CommissionModule({ currencySymbol }: any) {
                             </thead>
                             <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                                 {records.map((r) => (
-                                    <tr key={r._id} className="hover:bg-neutral-50 transition-all">
-                                        <td className="px-8 py-5">
-                                            <p className="font-black text-neutral-800">{r.jobId?.serviceName || 'Service'}</p>
-                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">Job ID: {r.jobId?._id?.slice(-6)}</p>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <p className="font-black text-neutral-800">{r.providerId?.firstName} {r.providerId?.lastName}</p>
-                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{r.providerId?.email}</p>
-                                        </td>
-                                        <td className="px-8 py-5 text-right font-black">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</td>
-                                        <td className="px-8 py-5 text-right text-neutral-500">{currencySymbol}{r.commissionAmount?.toFixed(2)} ({r.commissionPercentage}%)</td>
-                                        <td className="px-8 py-5 text-right text-green-600">-{currencySymbol}{r.bookingFeeCredit?.toFixed(2)}</td>
-                                        <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.outstandingBalance?.toFixed(2)}</td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${
-                                                r.status === 'PAID' ? 'bg-green-100 text-green-700' :
-                                                r.status === 'WAIVED' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-red-100 text-red-700'
-                                            }`}>{r.status}</span>
-                                        </td>
-                                    </tr>
+                                <tr key={r._id} className="hover:bg-neutral-50 transition-all group">
+                                    <td className="px-8 py-5">
+                                        <p className="font-black text-neutral-800">{r.jobId?.serviceName || 'Service'}</p>
+                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">Job ID: {r.jobId?._id?.slice(-6)}</p>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-3">
+                                            {r.providerId?.profilePhoto && <img src={r.providerId.profilePhoto} className="w-8 h-8 rounded-lg object-cover border border-neutral-100 shadow-sm" alt="" />}
+                                            <div>
+                                                <p className="font-black text-neutral-800">{r.providerId?.firstName} {r.providerId?.lastName}</p>
+                                                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{r.providerId?.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-5 text-right font-black">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-right text-neutral-500">{currencySymbol}{r.commissionAmount?.toFixed(2)} ({r.commissionPercentage}%)</td>
+                                    <td className="px-8 py-5 text-right text-green-600">-{currencySymbol}{r.bookingFeeCredit?.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.outstandingBalance?.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-center">
+                                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${
+                                            r.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                                            r.status === 'WAIVED' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>{r.status}</span>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
+                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => { setSelectedJobId(r.jobId?._id); setModalType('TIMELINE'); }} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm" title="View Timeline"><History size={12} /></button>
+                                            {r.status !== 'PAID' && r.status !== 'WAIVED' && (
+                                                <button
+                                                    onClick={async () => {
+                                                        const reason = prompt("Reason for waiver:");
+                                                        if (!reason) return;
+                                                        try {
+                                                            await api.post('/api/admin/finance/commissions/waive', { recordId: r._id, reason });
+                                                            alert("Commission waived");
+                                                            fetchData();
+                                                        } catch (e) { alert("Failed"); }
+                                                    }}
+                                                    className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-amber-500 hover:text-white transition-all shadow-sm"
+                                                    title="Waive Commission"
+                                                >
+                                                    <Undo size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
                                 ))}
                             </tbody>
                         </table>
@@ -1545,7 +1634,16 @@ function CommissionModule({ currencySymbol }: any) {
                 </div>
             )}
 
+            {subTab === "vouchers" && <UsedVouchersList />}
+
             {subTab === "settings" && <CommissionSettingsView />}
+
+            {modalType === 'TIMELINE' && selectedJobId && (
+                <CommissionTimelineModal
+                    jobId={selectedJobId}
+                    onClose={() => { setModalType(null); setSelectedJobId(null); }}
+                />
+            )}
         </div>
     );
 }
@@ -1657,6 +1755,188 @@ function SettingToggle({ label, value, onChange }: any) {
             >
                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${value ? 'right-1' : 'left-1'}`}></div>
             </button>
+        </div>
+    );
+}
+
+function UsedVouchersList() {
+    const { countryCode } = useCountryStore();
+    const [vouchers, setVouchers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchVouchers = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get(`/api/admin/finance/commissions/vouchers?countryCode=${countryCode}`);
+                setVouchers(res.data.data);
+            } catch (e) {
+                console.error("Failed to load vouchers");
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (countryCode) fetchVouchers();
+    }, [countryCode]);
+
+    return (
+        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500 text-neutral-900">
+            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50">
+                <h3 className="font-black text-lg uppercase tracking-tight">Voucher Redemption Registry</h3>
+                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Unique Redemption verification Layer</p>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                        <tr>
+                            <th className="px-8 py-4">Voucher Number</th>
+                            <th className="px-8 py-4">Vendor</th>
+                            <th className="px-8 py-4">Provider</th>
+                            <th className="px-8 py-4 text-right">Amount</th>
+                            <th className="px-8 py-4 text-right">Redeemed At</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-50 text-sm font-medium">
+                        {loading ? (
+                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 animate-pulse uppercase font-black text-[10px]">Scanning Voucher Vault...</td></tr>
+                        ) : vouchers.length === 0 ? (
+                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No redemptions detected in this workspace.</td></tr>
+                        ) : (
+                            vouchers.map((v) => (
+                                <tr key={v._id} className="hover:bg-neutral-50 transition-all">
+                                    <td className="px-8 py-5 font-mono text-xs font-bold text-neutral-800">{v.voucherNumber}</td>
+                                    <td className="px-8 py-5">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-100">{v.vendor}</span>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <p className="font-black text-neutral-800">{v.redeemedBy?.firstName} {v.redeemedBy?.lastName}</p>
+                                        <p className="text-[10px] font-bold text-neutral-400 uppercase">{v.redeemedBy?.email}</p>
+                                    </td>
+                                    <td className="px-8 py-5 text-right font-black text-neutral-900">{v.amount.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 uppercase font-black tracking-tighter">
+                                        {formatDate(v.redeemedAt)}
+                                        <span className="ml-2 opacity-50 font-mono">{formatTime(v.redeemedAt)}</span>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function CommissionTimelineModal({ jobId, onClose }: { jobId: string, onClose: () => void }) {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTimeline = async () => {
+            try {
+                const res = await api.get(`/api/admin/finance/commissions/timeline/${jobId}`);
+                setData(res.data.data);
+            } catch (e) {
+                console.error("Timeline fetch failed");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTimeline();
+    }, [jobId]);
+
+    return (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-8 text-neutral-900">
+            <div className="bg-white rounded-[48px] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+                <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/30">
+                    <div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Commission Trace Oracle</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Immutable Financial Event Sequence</p>
+                    </div>
+                    <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-2xl transition-colors"><XCircle className="text-neutral-300" /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-10 space-y-12">
+                    {loading ? (
+                        <div className="py-20 text-center text-xs font-black uppercase tracking-widest animate-pulse text-neutral-300">Synchronizing Ledger State...</div>
+                    ) : !data ? (
+                        <div className="py-20 text-center font-bold text-neutral-400 uppercase text-xs">No commission record found for this job signal.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            <div className="space-y-8">
+                                <div className="bg-neutral-50 rounded-[32px] p-8 border border-neutral-100">
+                                    <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 tracking-widest">Job Assets & Summary</h4>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <DetailRow label="Service" value={data.jobId?.serviceName} highlight />
+                                        <DetailRow label="Agreed Price" value={`R${data.acceptedPrice?.toFixed(2)}`} highlight color="text-neutral-900" />
+                                        <DetailRow label="Commission" value={`R${data.commissionAmount?.toFixed(2)} (${data.commissionPercentage}%)`} />
+                                        <DetailRow label="Booking Fee Credit" value={`-R${data.bookingFeeCredit?.toFixed(2)}`} color="text-green-600" />
+                                        <DetailRow label="Outstanding" value={`R${data.outstandingBalance?.toFixed(2)}`} highlight color="text-red-600" />
+                                        <DetailRow label="Status" value={data.status} highlight />
+                                    </div>
+
+                                    {data.jobId?.taskPhotos?.length > 0 && (
+                                        <div className="mt-8">
+                                            <p className="text-[9px] font-black uppercase text-neutral-400 mb-4 tracking-widest">Verification Photos</p>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {data.jobId.taskPhotos.map((p: string, i: number) => (
+                                                    <img key={i} src={p} className="w-full h-16 rounded-xl object-cover border border-white shadow-sm" alt="" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-[#121212] rounded-[32px] p-8 text-white">
+                                    <h4 className="text-[10px] font-black uppercase text-neutral-500 mb-6 tracking-widest">Node Interaction</h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <img src={data.providerId?.profilePhoto} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                                                <div>
+                                                    <p className="text-xs font-black">Provider Node</p>
+                                                    <p className="text-[10px] text-neutral-400">{data.providerId?.firstName} {data.providerId?.lastName}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <img src={data.customerId?.profilePhoto} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                                                <div>
+                                                    <p className="text-xs font-black">Customer Node</p>
+                                                    <p className="text-[10px] text-neutral-400">{data.customerId?.firstName} {data.customerId?.lastName}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <h4 className="text-[10px] font-black uppercase text-neutral-400 ml-1 tracking-widest">Timeline Event Log</h4>
+                                <div className="space-y-4 relative before:absolute before:left-3 before:top-4 before:bottom-4 before:w-0.5 before:bg-neutral-100">
+                                    {data.timeline?.map((ev: any, i: number) => (
+                                        <div key={i} className="flex gap-6 relative group">
+                                            <div className="w-6 h-6 rounded-full bg-white border-2 border-neutral-900 z-10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse"></div>
+                                            </div>
+                                            <div className="flex-1 pb-4">
+                                                <p className="text-[11px] font-black uppercase tracking-tight text-neutral-800">{ev.event.replace(/_/g, ' ')}</p>
+                                                <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">{formatDateTimeLong(ev.timestamp)}</p>
+                                                {ev.metadata && (
+                                                    <div className="mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[10px] font-mono text-neutral-500 whitespace-pre-wrap">
+                                                        {JSON.stringify(ev.metadata, null, 2)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
