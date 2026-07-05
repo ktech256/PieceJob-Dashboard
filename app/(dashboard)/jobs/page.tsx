@@ -111,7 +111,13 @@ export default function JobsMonitoring() {
     setIsDetailsOpen(true);
   };
 
-  const filteredJobs = jobs.filter(j => activeFilter === 'ALL' || j.status === activeFilter);
+  const filteredJobs = jobs.filter(j => {
+    if (activeFilter === 'ALL') return true;
+    if (activeFilter === 'NEGOTIATION_PRICE') {
+        return ['PHOTO_REQUEST', 'WAITING_FOR_PHOTOS', 'PHOTOS_UPLOADED', 'PRICE_PROPOSAL', 'WAITING_FOR_PROVIDER', 'WAITING_FOR_CUSTOMER', 'PRICE_ACCEPTED'].includes(j.currentNegotiationPhase);
+    }
+    return j.status === activeFilter;
+  });
 
   const getCurrency = (job: any) => {
     if (job.pricingSnapshot?.currencyCode) return job.pricingSnapshot.currencyCode;
@@ -133,8 +139,9 @@ export default function JobsMonitoring() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <StatCard title="Active Requests" value={jobs.length.toString()} icon={<Briefcase size={20} />} color="bg-blue-50 text-blue-600" />
+          <StatCard title="Negotiation Price" value={jobs.filter(j => ['PHOTO_REQUEST', 'WAITING_FOR_PHOTOS', 'PHOTOS_UPLOADED', 'PRICE_PROPOSAL', 'WAITING_FOR_PROVIDER', 'WAITING_FOR_CUSTOMER', 'PRICE_ACCEPTED'].includes(j.currentNegotiationPhase)).length.toString()} icon={<CreditCard size={20} />} color="bg-yellow-50 text-yellow-600" />
           <StatCard title="En Route" value={jobs.filter(j => j.status === 'EN_ROUTE').length.toString()} icon={<Clock size={20} />} color="bg-orange-50 text-orange-600" />
           <StatCard title="In Progress" value={jobs.filter(j => j.status === 'STARTED').length.toString()} icon={<CheckCircle2 size={20} />} color="bg-green-50 text-green-600" />
           <StatCard title="Broadcasts" value={jobs.filter(j => j.status === 'BROADCASTED').length.toString()} icon={<RefreshCcw size={20} />} color="bg-purple-50 text-purple-600" />
@@ -142,12 +149,12 @@ export default function JobsMonitoring() {
 
       <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
           <div className="p-8 border-b border-neutral-100 flex justify-between items-center">
-              <div className="flex gap-4">
-                  {['ALL', 'BROADCASTED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'STARTED'].map(f => (
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                  {['ALL', 'BROADCASTED', 'NEGOTIATION_PRICE', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'STARTED'].map(f => (
                       <button
                         key={f}
                         onClick={() => setActiveFilter(f)}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${activeFilter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-50 text-neutral-400'}`}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeFilter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-50 text-neutral-400'}`}
                       >
                           {f.replace('_', ' ')}
                       </button>
@@ -196,6 +203,16 @@ export default function JobsMonitoring() {
                                           <button onClick={() => openOverride(job, 'CANCELLED')} title="Cancel Broadcast" className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all">
                                               <Ban size={14} />
                                           </button>
+                                      )}
+                                      {['PHOTO_REQUEST', 'WAITING_FOR_PHOTOS', 'PHOTOS_UPLOADED', 'PRICE_PROPOSAL', 'WAITING_FOR_PROVIDER', 'WAITING_FOR_CUSTOMER', 'PRICE_ACCEPTED'].includes(job.currentNegotiationPhase) && (
+                                          <>
+                                              <button onClick={() => openOverride(job, 'ACCEPTED')} title="Force Accept Negotiation" className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all">
+                                                  <CheckCircle2 size={14} />
+                                              </button>
+                                              <button onClick={() => openOverride(job, 'CANCELLED')} title="Cancel Job" className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all">
+                                                  <XCircle size={14} />
+                                              </button>
+                                          </>
                                       )}
                                       {['ACCEPTED', 'ARRIVED', 'EN_ROUTE'].includes(job.status) && (
                                           <>

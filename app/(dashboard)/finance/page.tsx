@@ -1563,73 +1563,124 @@ function CommissionModule({ currencySymbol }: any) {
             )}
 
             {subTab === "records" && (
-                <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
-                                <tr>
-                                    <th className="px-8 py-4">Job / Service</th>
-                                    <th className="px-8 py-4">Provider</th>
-                                    <th className="px-8 py-4 text-right">Price</th>
-                                    <th className="px-8 py-4 text-right">Commission (%)</th>
-                                    <th className="px-8 py-4 text-right">Credit</th>
-                                    <th className="px-8 py-4 text-right">Outstanding</th>
-                                    <th className="px-8 py-4 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-50 text-sm font-medium">
-                                {records.map((r) => (
-                                <tr key={r._id} className="hover:bg-neutral-50 transition-all group">
-                                    <td className="px-8 py-5">
-                                        <p className="font-black text-neutral-800">{r.jobId?.serviceName || 'Service'}</p>
-                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">Job ID: {r.jobId?._id?.slice(-6)}</p>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            {r.providerId?.profilePhoto && <img src={r.providerId.profilePhoto} className="w-8 h-8 rounded-lg object-cover border border-neutral-100 shadow-sm" alt="" />}
-                                            <div>
-                                                <p className="font-black text-neutral-800">{r.providerId?.firstName} {r.providerId?.lastName}</p>
-                                                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{r.providerId?.email}</p>
+                <div className="space-y-8">
+                    <div className="flex flex-wrap gap-4 bg-white p-6 rounded-[32px] border border-neutral-200 shadow-sm">
+                        <div className="flex-1 min-w-[200px] relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={14} />
+                            <input type="text" placeholder="Search Job or Provider..." className="w-full pl-10 pr-4 py-2 bg-neutral-50 border-none rounded-xl text-xs font-bold outline-none" />
+                        </div>
+                        <div className="flex gap-2">
+                             <select className="bg-neutral-50 border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none cursor-pointer">
+                                <option>All Status</option>
+                                <option>PAID</option>
+                                <option>PENDING</option>
+                                <option>WAIVED</option>
+                             </select>
+                             <button className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all">
+                                <Filter size={14} />
+                                Apply Filters
+                             </button>
+                             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-600 rounded-xl text-[10px] font-black uppercase hover:bg-neutral-50 transition-all">
+                                <Download size={14} />
+                                Export CSV
+                             </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[1400px]">
+                                <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                                    <tr>
+                                        <th className="px-8 py-5">Job Snapshot</th>
+                                        <th className="px-8 py-5">Participants</th>
+                                        <th className="px-8 py-5">Workspace / Type</th>
+                                        <th className="px-8 py-5 text-right">Agreed Value</th>
+                                        <th className="px-8 py-5 text-right">Commission</th>
+                                        <th className="px-8 py-5 text-center">Status</th>
+                                        <th className="px-8 py-5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-50 text-sm font-medium">
+                                    {records.map((r) => (
+                                    <tr key={r._id} className="hover:bg-neutral-50/50 transition-all group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col gap-1">
+                                                <p className="font-black text-neutral-800 text-xs tracking-tight">#{r.jobId?._id?.slice(-8).toUpperCase()}</p>
+                                                <p className="text-[10px] font-bold text-neutral-400 uppercase">{formatDate(r.createdAt)} • {formatTime(r.createdAt)}</p>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5 text-right font-black">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</td>
-                                    <td className="px-8 py-5 text-right text-neutral-500">{currencySymbol}{r.commissionAmount?.toFixed(2)} ({r.commissionPercentage}%)</td>
-                                    <td className="px-8 py-5 text-right text-green-600">-{currencySymbol}{r.bookingFeeCredit?.toFixed(2)}</td>
-                                    <td className="px-8 py-5 text-right font-black text-red-600">{currencySymbol}{r.outstandingBalance?.toFixed(2)}</td>
-                                    <td className="px-8 py-5 text-center">
-                                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${
-                                            r.status === 'PAID' ? 'bg-green-100 text-green-700' :
-                                            r.status === 'WAIVED' ? 'bg-amber-100 text-amber-700' :
-                                            'bg-red-100 text-red-700'
-                                        }`}>{r.status}</span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => { setSelectedJobId(r.jobId?._id); setModalType('TIMELINE'); }} className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-900 hover:text-white transition-all shadow-sm" title="View Timeline"><History size={12} /></button>
-                                            {r.status !== 'PAID' && r.status !== 'WAIVED' && (
-                                                <button
-                                                    onClick={async () => {
-                                                        const reason = prompt("Reason for waiver:");
-                                                        if (!reason) return;
-                                                        try {
-                                                            await api.post('/api/admin/finance/commissions/waive', { recordId: r._id, reason });
-                                                            alert("Commission waived");
-                                                            fetchData();
-                                                        } catch (e) { alert("Failed"); }
-                                                    }}
-                                                    className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-amber-500 hover:text-white transition-all shadow-sm"
-                                                    title="Waive Commission"
-                                                >
-                                                    <Undo size={12} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center text-[8px] font-black border border-orange-100">P</div>
+                                                    <p className="text-xs font-black">{r.providerId?.firstName} {r.providerId?.lastName}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-[8px] font-black border border-blue-100">C</div>
+                                                    <p className="text-xs font-bold text-neutral-500">{r.jobId?.customerId?.firstName || 'User'} {r.jobId?.customerId?.lastName || ''}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-xs font-black text-neutral-900">{r.jobId?.serviceName}</p>
+                                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">{r.jobId?.countryCode} SECTOR</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="font-black text-neutral-900 text-lg">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</p>
+                                            <p className="text-[9px] font-bold text-neutral-400 uppercase"> Agreed Price</p>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="font-black text-indigo-600 text-sm">{currencySymbol}{r.commissionAmount?.toFixed(2)}</p>
+                                            <p className="text-[9px] font-bold text-neutral-400 uppercase">Yield @ {r.commissionPercentage}%</p>
+                                        </td>
+                                        <td className="px-8 py-6 text-center">
+                                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase border ${
+                                                r.status === 'PAID' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                r.status === 'WAIVED' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                'bg-red-50 text-red-700 border-red-100'
+                                            }`}>{r.status}</span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button onClick={() => { setSelectedJobId(r.jobId?._id); setModalType('TIMELINE'); }} className="p-2 bg-neutral-100 rounded-xl hover:bg-neutral-900 hover:text-white transition-all shadow-sm" title="View Deep Negotiation History"><ShieldCheck size={16} /></button>
+                                                <button onClick={() => alert('View normal chats logic here')} className="p-2 bg-neutral-100 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="View Terminal Chat Logs"><MessageSquare size={16} /></button>
+                                                <button onClick={() => alert('View call logs logic here')} className="p-2 bg-neutral-100 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="View Secure Call Logs"><Phone size={16} /></button>
+                                                <button onClick={() => {
+                                                    if(confirm(`Suspend Provider ${r.providerId?.firstName}?`)) {
+                                                        api.patch(`/api/admin/providers/${r.providerId?._id}/suspend`, { suspended: true });
+                                                        alert("Suspension Auth Signal Sent");
+                                                    }
+                                                }} className="p-2 bg-neutral-100 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Suspend Provider Node"><Ban size={16} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="p-8 bg-neutral-900 text-white flex flex-col lg:flex-row justify-between items-center gap-8">
+                             <div className="flex gap-12">
+                                <div className="text-center lg:text-left">
+                                    <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Total Agreed Value</p>
+                                    <p className="text-2xl font-black">{currencySymbol}{records.reduce((acc, r) => acc + (r.acceptedPrice || 0), 0).toLocaleString()}</p>
+                                </div>
+                                <div className="text-center lg:text-left border-l border-white/10 pl-12">
+                                    <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Projected Platform Yield</p>
+                                    <p className="text-2xl font-black text-emerald-400">{currencySymbol}{records.reduce((acc, r) => acc + (r.commissionAmount || 0), 0).toLocaleString()}</p>
+                                </div>
+                                <div className="text-center lg:text-left border-l border-white/10 pl-12">
+                                    <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Outstanding Commission</p>
+                                    <p className="text-2xl font-black text-red-400">{currencySymbol}{records.reduce((acc, r) => acc + (r.status !== 'PAID' && r.status !== 'WAIVED' ? r.outstandingBalance : 0), 0).toLocaleString()}</p>
+                                </div>
+                             </div>
+                             <div className="text-right">
+                                <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Dataset Population</p>
+                                <p className="text-xs font-bold">{records.length} Audit Grade Records Identified</p>
+                             </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1845,87 +1896,143 @@ function CommissionTimelineModal({ jobId, onClose }: { jobId: string, onClose: (
         fetchTimeline();
     }, [jobId]);
 
+    const getCurrency = (j: any) => j?.pricingSnapshot?.currencyCode || 'R';
+
     return (
         <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-8 text-neutral-900">
-            <div className="bg-white rounded-[48px] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+            <div className="bg-white rounded-[48px] w-full max-w-6xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/30">
                     <div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Commission Trace Oracle</h3>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Immutable Financial Event Sequence</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Forensic Audit: Job Case #{jobId.slice(-8).toUpperCase()}</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Deep Intelligence & Negotiation History</p>
                     </div>
                     <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-2xl transition-colors"><XCircle className="text-neutral-300" /></button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-10 space-y-12">
+                <div className="flex-1 overflow-y-auto p-10 space-y-12 scrollbar-hide">
                     {loading ? (
-                        <div className="py-20 text-center text-xs font-black uppercase tracking-widest animate-pulse text-neutral-300">Synchronizing Ledger State...</div>
+                        <div className="py-20 text-center text-xs font-black uppercase tracking-widest animate-pulse text-neutral-300">Synchronizing Forensic State...</div>
                     ) : !data ? (
-                        <div className="py-20 text-center font-bold text-neutral-400 uppercase text-xs">No commission record found for this job signal.</div>
+                        <div className="py-20 text-center font-bold text-neutral-400 uppercase text-xs">No audit record found for this signal.</div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
+                            {/* LEFT: JOB & PARTICIPANTS */}
                             <div className="space-y-8">
-                                <div className="bg-neutral-50 rounded-[32px] p-8 border border-neutral-100">
-                                    <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 tracking-widest">Job Assets & Summary</h4>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <DetailRow label="Service" value={data.jobId?.serviceName} highlight />
-                                        <DetailRow label="Agreed Price" value={`R${data.acceptedPrice?.toFixed(2)}`} highlight color="text-neutral-900" />
-                                        <DetailRow label="Commission" value={`R${data.commissionAmount?.toFixed(2)} (${data.commissionPercentage}%)`} />
-                                        <DetailRow label="Booking Fee Credit" value={`-R${data.bookingFeeCredit?.toFixed(2)}`} color="text-green-600" />
-                                        <DetailRow label="Outstanding" value={`R${data.outstandingBalance?.toFixed(2)}`} highlight color="text-red-600" />
-                                        <DetailRow label="Status" value={data.status} highlight />
+                                <div className="bg-neutral-50 rounded-[32px] p-8 border border-neutral-100 shadow-inner">
+                                    <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 tracking-widest">Financial Summary</h4>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Service Category</p>
+                                            <p className="text-sm font-black text-neutral-900">{data.jobId?.serviceName}</p>
+                                        </div>
+                                        <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Agreed Job Price</p>
+                                            <p className="text-xl font-black text-blue-600">{getCurrency(data.jobId)}{data.jobId?.agreedPrice || data.acceptedPrice || 0}</p>
+                                        </div>
+                                        <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Platform Commission</p>
+                                            <p className="text-sm font-black text-indigo-600">{getCurrency(data.jobId)}{data.commissionAmount || 0} ({data.commissionPercentage || 0}%)</p>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Current Ledger Status</p>
+                                            <span className="px-3 py-1 bg-neutral-900 text-white text-[9px] font-black rounded-lg">{data.status || 'PENDING'}</span>
+                                        </div>
                                     </div>
 
                                     {data.jobId?.taskPhotos?.length > 0 && (
-                                        <div className="mt-8">
-                                            <p className="text-[9px] font-black uppercase text-neutral-400 mb-4 tracking-widest">Verification Photos</p>
+                                        <div className="mt-10">
+                                            <p className="text-[9px] font-black uppercase text-neutral-400 mb-4 tracking-widest">Evidence: Task Photos</p>
                                             <div className="grid grid-cols-4 gap-2">
                                                 {data.jobId.taskPhotos.map((p: string, i: number) => (
-                                                    <img key={i} src={p} className="w-full h-16 rounded-xl object-cover border border-white shadow-sm" alt="" />
+                                                    <img key={i} src={p} className="w-full h-16 rounded-xl object-cover border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-zoom-in" alt="" onClick={() => window.open(p, '_blank')} />
                                                 ))}
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="bg-[#121212] rounded-[32px] p-8 text-white">
-                                    <h4 className="text-[10px] font-black uppercase text-neutral-500 mb-6 tracking-widest">Node Interaction</h4>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <div className="flex items-center gap-3">
-                                                <img src={data.providerId?.profilePhoto} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                                                <div>
-                                                    <p className="text-xs font-black">Provider Node</p>
-                                                    <p className="text-[10px] text-neutral-400">{data.providerId?.firstName} {data.providerId?.lastName}</p>
-                                                </div>
+                                <div className="bg-[#121212] rounded-[32px] p-8 text-white shadow-xl">
+                                    <h4 className="text-[10px] font-black uppercase text-neutral-500 mb-8 tracking-widest">Node Connectivity</h4>
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-white">P</div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-neutral-500">Service Provider</p>
+                                                <p className="text-xs font-black">{data.providerId?.firstName} {data.providerId?.lastName || data.jobId?.providerId?.firstName}</p>
                                             </div>
                                         </div>
-                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <div className="flex items-center gap-3">
-                                                <img src={data.customerId?.profilePhoto} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                                                <div>
-                                                    <p className="text-xs font-black">Customer Node</p>
-                                                    <p className="text-[10px] text-neutral-400">{data.customerId?.firstName} {data.customerId?.lastName}</p>
-                                                </div>
+                                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center font-black text-white">C</div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-neutral-500">Service Customer</p>
+                                                <p className="text-xs font-black">{data.customerId?.firstName} {data.customerId?.lastName || data.jobId?.customerId?.firstName}</p>
                                             </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
+                                        <div className="text-center p-4 bg-white/5 rounded-2xl">
+                                            <p className="text-xl font-black">{data.chatCount || 0}</p>
+                                            <p className="text-[8px] font-black uppercase text-neutral-500">Chat Log</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-white/5 rounded-2xl">
+                                            <p className="text-xl font-black">{data.proposals?.length || 0}</p>
+                                            <p className="text-[8px] font-black uppercase text-neutral-500">Price Rounds</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
-                                <h4 className="text-[10px] font-black uppercase text-neutral-400 ml-1 tracking-widest">Timeline Event Log</h4>
-                                <div className="space-y-4 relative before:absolute before:left-3 before:top-4 before:bottom-4 before:w-0.5 before:bg-neutral-100">
-                                    {data.timeline?.map((ev: any, i: number) => (
-                                        <div key={i} className="flex gap-6 relative group">
-                                            <div className="w-6 h-6 rounded-full bg-white border-2 border-neutral-900 z-10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse"></div>
+                            {/* MIDDLE: NEGOTIATION ROUNDS */}
+                            <div className="space-y-8">
+                                <h4 className="text-[10px] font-black uppercase text-neutral-400 ml-1 tracking-widest">Negotiation Deep Scan</h4>
+                                <div className="space-y-4">
+                                    {data.proposals?.length === 0 ? (
+                                        <div className="p-12 text-center border-2 border-dashed border-neutral-100 rounded-[32px]">
+                                            <p className="text-[10px] font-black uppercase text-neutral-300">No proposals recorded for this session.</p>
+                                        </div>
+                                    ) : (
+                                        data.proposals.map((p: any, idx: number) => (
+                                            <div key={idx} className={`p-6 rounded-[24px] border ${p.status === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100' : p.status === 'REJECTED' ? 'bg-red-50 border-red-100' : 'bg-white border-neutral-100 shadow-sm'}`}>
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div>
+                                                        <p className="text-[8px] font-black uppercase text-neutral-400 mb-1">Round {p.round}</p>
+                                                        <p className={`text-lg font-black ${p.status === 'ACCEPTED' ? 'text-emerald-700' : 'text-neutral-900'}`}>{getCurrency(data.jobId)}{p.amount.toFixed(2)}</p>
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                                        p.status === 'ACCEPTED' ? 'bg-emerald-200 text-emerald-800' :
+                                                        p.status === 'REJECTED' ? 'bg-red-200 text-red-800' :
+                                                        'bg-neutral-100 text-neutral-500'
+                                                    }`}>{p.status}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-[10px] font-bold text-neutral-500 italic">"{p.note || 'No narrative provided'}"</p>
+                                                    <p className="text-[8px] font-black text-neutral-400 uppercase">{formatDate(p.createdAt)}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 pb-4">
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* RIGHT: TIMELINE */}
+                            <div className="space-y-8">
+                                <h4 className="text-[10px] font-black uppercase text-neutral-400 ml-1 tracking-widest">Protocol Execution Timeline</h4>
+                                <div className="space-y-6 relative before:absolute before:left-3 before:top-4 before:bottom-4 before:w-0.5 before:bg-neutral-100">
+                                    {(data.jobId?.negotiationTimeline || data.timeline || []).map((ev: any, i: number) => (
+                                        <div key={i} className="flex gap-6 relative group">
+                                            <div className={`w-6 h-6 rounded-full bg-white border-2 z-10 flex items-center justify-center group-hover:scale-110 transition-transform ${
+                                                ['PRICE_ACCEPTED', 'PHOTOS_REVIEWED', 'DISPATCH_CONFIRMED'].includes(ev.event) ? 'border-emerald-500' : 'border-neutral-900'
+                                            }`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                                                    ['PRICE_ACCEPTED', 'PHOTOS_REVIEWED', 'DISPATCH_CONFIRMED'].includes(ev.event) ? 'bg-emerald-500' : 'bg-neutral-900'
+                                                }`}></div>
+                                            </div>
+                                            <div className="flex-1 pb-2">
                                                 <p className="text-[11px] font-black uppercase tracking-tight text-neutral-800">{ev.event.replace(/_/g, ' ')}</p>
                                                 <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">{formatDateTimeLong(ev.timestamp)}</p>
-                                                {ev.metadata && (
-                                                    <div className="mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[10px] font-mono text-neutral-500 whitespace-pre-wrap">
-                                                        {JSON.stringify(ev.metadata, null, 2)}
+                                                {ev.metadata && Object.keys(ev.metadata).length > 0 && (
+                                                    <div className="mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[9px] font-mono text-neutral-400">
+                                                        {JSON.stringify(ev.metadata)}
                                                     </div>
                                                 )}
                                             </div>
