@@ -33,7 +33,9 @@ import {
   ChevronRight,
   UserPlus,
   Coins,
-  ShieldAlert
+  ShieldAlert,
+  MessageSquare,
+  Phone
 } from 'lucide-react';
 
 const formatDate = (date: string | Date | undefined) => {
