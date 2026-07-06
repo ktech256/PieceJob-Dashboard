@@ -684,9 +684,9 @@ function LedgerExplorer({ currencySymbol }: any) {
                                     <td className="px-8 py-5">
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
                                             ['SERVICE_FEE', 'BOOKING_FEE'].includes(tx.type) ? 'bg-green-50 text-green-700 border-green-100' :
-                                            ['COMMISSION', 'PAYOUT'].includes(tx.type) ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                            ['Service Fee', 'PAYOUT'].includes(tx.type) ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
                                             'bg-neutral-50 text-neutral-600 border-neutral-200'
-                                        }`}>{tx.type === 'COMMISSION' ? 'SERVICE_FEE' : tx.type}</span>
+                                        }`}>{tx.type === 'Service Fee' ? 'SERVICE_FEE' : tx.type}</span>
                                     </td>
                                     <td className={`px-8 py-5 text-right font-black ${['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? 'text-green-600' : 'text-red-600'}`}>
                                         {['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? '+' : '-'}{tx.amount.toFixed(2)} {tx.currency}
