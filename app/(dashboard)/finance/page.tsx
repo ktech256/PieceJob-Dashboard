@@ -1472,11 +1472,11 @@ function ServiceFeeModule({ currencySymbol }: any) {
             {subTab === "dashboard" && stats && (
                 <div className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <FinanceCard label="Outstanding" value={`${currencySymbol}${stats.serviceFeeBalance?.toFixed(2)}`} sub="Total Owed" color="red" />
-                        <FinanceCard label="Today" value={`${currencySymbol}${stats.collectedToday?.toFixed(2)}`} sub="Collected" color="green" />
-                        <FinanceCard label="This Week" value={`${currencySymbol}${stats.collectedThisWeek?.toFixed(2)}`} sub="Collected" color="emerald" />
-                        <FinanceCard label="This Month" value={`${currencySymbol}${stats.collectedThisMonth?.toFixed(2)}`} sub="Collected" color="indigo" />
-                        <FinanceCard label="Contribution" value={`${currencySymbol}${stats.bookingFeePaid?.toFixed(2)}`} sub="Customer Paid" color="blue" />
+                        <FinanceCard label="Outstanding" value={`${currencySymbol}${stats.totalOutstanding?.toFixed(2)}`} sub="Total Owed" color="red" />
+                        <FinanceCard label="Provider Credits" value={`${currencySymbol}${stats.totalCredits?.toFixed(2)}`} sub="Negative Balances" color="green" />
+                        <FinanceCard label="Collected All-Time" value={`${currencySymbol}${stats.collectedAllTime?.toFixed(2)}`} sub="Platform Share" color="indigo" />
+                        <FinanceCard label="Today" value={`${currencySymbol}${stats.collectedToday?.toFixed(2)}`} sub="Collected" color="emerald" />
+                        <FinanceCard label="Contributions" value={`${currencySymbol}${stats.bookingFeePaid?.toFixed(2)}`} sub="Booking Fees" color="blue" />
                         <FinanceCard label="Waived" value={`${currencySymbol}${stats.waivedServiceFee?.toFixed(2)}`} sub="Total Waived" color="amber" />
                     </div>
 
@@ -1846,14 +1846,15 @@ function UsedVouchersList() {
                             <th className="px-8 py-4">Vendor</th>
                             <th className="px-8 py-4">Provider</th>
                             <th className="px-8 py-4 text-right">Amount</th>
+                            <th className="px-8 py-4 text-center">Status</th>
                             <th className="px-8 py-4 text-right">Redeemed At</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50 text-sm font-medium">
                         {loading ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 animate-pulse uppercase font-black text-[10px]">Scanning Voucher Vault...</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 animate-pulse uppercase font-black text-[10px]">Scanning Voucher Vault...</td></tr>
                         ) : vouchers.length === 0 ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No redemptions detected in this workspace.</td></tr>
+                            <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No redemptions detected in this workspace.</td></tr>
                         ) : (
                             vouchers.map((v) => (
                                 <tr key={v._id} className="hover:bg-neutral-50 transition-all">
@@ -1862,10 +1863,22 @@ function UsedVouchersList() {
                                         <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-100">{v.vendor}</span>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <p className="font-black text-neutral-800">{v.redeemedBy?.firstName} {v.redeemedBy?.lastName}</p>
-                                        <p className="text-[10px] font-bold text-neutral-400 uppercase">{v.redeemedBy?.email}</p>
+                                        <div className="flex items-center gap-3">
+                                            {v.redeemedBy?.profilePhoto && <img src={v.redeemedBy.profilePhoto} className="w-8 h-8 rounded-lg object-cover" />}
+                                            <div>
+                                                <p className="font-black text-neutral-800">{v.redeemedBy?.firstName} {v.redeemedBy?.lastName}</p>
+                                                <p className="text-[10px] font-bold text-neutral-400 uppercase">{v.redeemedBy?.email}</p>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="px-8 py-5 text-right font-black text-neutral-900">{v.amount.toFixed(2)}</td>
+                                    <td className="px-8 py-5 text-center">
+                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                            v.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                            v.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                            'bg-yellow-100 text-yellow-700'
+                                        }`}>{v.status || 'APPROVED'}</span>
+                                    </td>
                                     <td className="px-8 py-5 text-right text-xs text-neutral-400 uppercase font-black tracking-tighter">
                                         {formatDate(v.redeemedAt)}
                                         <span className="ml-2 opacity-50 font-mono">{formatTime(v.redeemedAt)}</span>
