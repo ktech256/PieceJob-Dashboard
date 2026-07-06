@@ -66,7 +66,7 @@ export default function SettingsPage() {
             description="Fee structures and cooling windows."
           >
               <div className="space-y-4 mt-6">
-                  <SettingRow label="Platform Commission" value={`${settings?.platformCommissionPercent}%`} />
+                  <SettingRow label="Service Fee" value={`${settings?.platformServiceFeePercent}%`} />
                   <SettingRow label="Escrow Cooling" value={`${settings?.escrowCoolingPeriodHours} hours`} />
                   <SettingRow label="Currency" value={settings?.currency || 'USD'} />
               </div>

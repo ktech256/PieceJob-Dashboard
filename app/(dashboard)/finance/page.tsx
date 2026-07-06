@@ -89,7 +89,7 @@ export default function FinanceControlCentre() {
 
   const [stats, setStats] = useState({
     totalRevenue: 0,
-    netCommission: 0,
+    netServiceFee: 0,
     pendingPayouts: 0,
     activeEscrow: 0,
     totalCustomerWallets: 0,
@@ -125,7 +125,7 @@ export default function FinanceControlCentre() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard size={14} /> },
-    { id: "commissions", label: "Commissions", icon: <Coins size={14} /> },
+    { id: "service-fees", label: "Service Fees", icon: <Coins size={14} /> },
     { id: "customers", label: "Customers", icon: <User size={14} /> },
     { id: "providers", label: "Providers", icon: <HardHat size={14} /> },
     { id: "ledger", label: "Ledger", icon: <History size={14} /> },
@@ -166,7 +166,7 @@ export default function FinanceControlCentre() {
             <FinanceCard label="Customer Wallets" value={(stats.totalCustomerWallets || 0).toString()} sub="Total Active" color="blue" />
             <FinanceCard label="Provider Wallets" value={(stats.totalProviderWallets || 0).toString()} sub="Total Active" color="green" />
             <FinanceCard label="Total Platform Revenue" value={`${stats.currencySymbol || ''}${(stats.totalRevenue || 0).toLocaleString()}`} sub="Gross Volume" color="emerald" />
-            <FinanceCard label="Net Commission" value={`${stats.currencySymbol || ''}${(stats.netCommission || 0).toLocaleString()}`} sub="Earned Profit" color="indigo" />
+            <FinanceCard label="Net Service Fee" value={`${stats.currencySymbol || ''}${(stats.netServiceFee || 0).toLocaleString()}`} sub="Earned Profit" color="indigo" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <FinanceCard label="Total in Escrow" value={`${stats.currencySymbol || ''}${(stats.activeEscrow || 0).toLocaleString()}`} sub="Held Funds" color="amber" />
@@ -178,7 +178,7 @@ export default function FinanceControlCentre() {
         </div>
       )}
 
-      {activeTab === "commissions" && <CommissionModule currencySymbol={stats.currencySymbol} />}
+      {activeTab === "service-fees" && <ServiceFeeModule currencySymbol={stats.currencySymbol} />}
       {activeTab === "customers" && <WalletList role="CUSTOMER" currencySymbol={stats.currencySymbol} />}
       {activeTab === "providers" && <WalletList role="PROVIDER" currencySymbol={stats.currencySymbol} />}
       {activeTab === "ledger" && <LedgerExplorer currencySymbol={stats.currencySymbol} />}
@@ -686,7 +686,7 @@ function LedgerExplorer({ currencySymbol }: any) {
                                             ['SERVICE_FEE', 'BOOKING_FEE'].includes(tx.type) ? 'bg-green-50 text-green-700 border-green-100' :
                                             ['COMMISSION', 'PAYOUT'].includes(tx.type) ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
                                             'bg-neutral-50 text-neutral-600 border-neutral-200'
-                                        }`}>{tx.type}</span>
+                                        }`}>{tx.type === 'COMMISSION' ? 'SERVICE_FEE' : tx.type}</span>
                                     </td>
                                     <td className={`px-8 py-5 text-right font-black ${['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? 'text-green-600' : 'text-red-600'}`}>
                                         {['SERVICE_FEE', 'BOOKING_FEE', 'CREDIT_TOPUP', 'PROMO_CREDIT', 'REFERRAL_REWARD', 'MANUAL_CREDIT'].includes(tx.type) ? '+' : '-'}{tx.amount.toFixed(2)} {tx.currency}
@@ -1422,7 +1422,7 @@ function IntegrityItem({ label, status }: any) {
     );
 }
 
-function CommissionModule({ currencySymbol }: any) {
+function ServiceFeeModule({ currencySymbol }: any) {
     const { countryCode } = useCountryStore();
     const [stats, setStats] = useState<any>(null);
     const [records, setRecords] = useState<any[]>([]);
@@ -1437,13 +1437,13 @@ function CommissionModule({ currencySymbol }: any) {
         setLoading(true);
         try {
             const [statsRes, recordsRes] = await Promise.all([
-                api.get(`/api/admin/finance/commissions/overview?countryCode=${countryCode}`),
-                api.get(`/api/admin/finance/commissions/records?countryCode=${countryCode}`)
+                api.get(`/api/admin/finance/service-fees/overview?countryCode=${countryCode}`),
+                api.get(`/api/admin/finance/service-fees/records?countryCode=${countryCode}`)
             ]);
             setStats(statsRes.data.stats);
             setRecords(recordsRes.data.data);
         } catch (e) {
-            console.error("Failed to fetch commission data");
+            console.error("Failed to fetch service fee data");
         } finally {
             setLoading(false);
         }
@@ -1472,12 +1472,12 @@ function CommissionModule({ currencySymbol }: any) {
             {subTab === "dashboard" && stats && (
                 <div className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <FinanceCard label="Outstanding" value={`${currencySymbol}${stats.outstandingCommission?.toFixed(2)}`} sub="Total Owed" color="red" />
+                        <FinanceCard label="Outstanding" value={`${currencySymbol}${stats.serviceFeeBalance?.toFixed(2)}`} sub="Total Owed" color="red" />
                         <FinanceCard label="Today" value={`${currencySymbol}${stats.collectedToday?.toFixed(2)}`} sub="Collected" color="green" />
                         <FinanceCard label="This Week" value={`${currencySymbol}${stats.collectedThisWeek?.toFixed(2)}`} sub="Collected" color="emerald" />
                         <FinanceCard label="This Month" value={`${currencySymbol}${stats.collectedThisMonth?.toFixed(2)}`} sub="Collected" color="indigo" />
-                        <FinanceCard label="Credits" value={`${currencySymbol}${stats.bookingFeeCredits?.toFixed(2)}`} sub="Booking Fees" color="blue" />
-                        <FinanceCard label="Waived" value={`${currencySymbol}${stats.waivedCommission?.toFixed(2)}`} sub="Total Waived" color="amber" />
+                        <FinanceCard label="Contribution" value={`${currencySymbol}${stats.bookingFeePaid?.toFixed(2)}`} sub="Customer Paid" color="blue" />
+                        <FinanceCard label="Waived" value={`${currencySymbol}${stats.waivedServiceFee?.toFixed(2)}`} sub="Total Waived" color="amber" />
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -1500,7 +1500,7 @@ function CommissionModule({ currencySymbol }: any) {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-black text-red-600">{currencySymbol}{p.outstandingCommission?.toFixed(2)}</p>
+                                            <p className="font-black text-red-600">{currencySymbol}{p.serviceFeeBalance?.toFixed(2)}</p>
                                             <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${p.isSuspended ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                                                 {p.isSuspended ? 'Suspended' : 'Active'}
                                             </span>
@@ -1533,7 +1533,7 @@ function CommissionModule({ currencySymbol }: any) {
                                                 if (!val) return alert("Enter threshold");
                                                 if (!confirm(`Suspend all providers owing more than ${val}?`)) return;
                                                 try {
-                                                    await api.post('/api/admin/finance/commissions/bulk-suspend', { threshold: val, countryCode });
+                                                    await api.post('/api/admin/finance/service-fees/bulk-suspend', { threshold: val, countryCode });
                                                     alert("Bulk suspension completed");
                                                     fetchData();
                                                 } catch (e) { alert("Failed"); }
@@ -1549,7 +1549,7 @@ function CommissionModule({ currencySymbol }: any) {
                                     onClick={async () => {
                                         if (!confirm("Unsuspend ALL currently suspended providers in this workspace?")) return;
                                         try {
-                                            await api.post('/api/admin/finance/commissions/bulk-unsuspend', { countryCode });
+                                            await api.post('/api/admin/finance/service-fees/bulk-unsuspend', { countryCode });
                                             alert("Bulk unsuspension completed");
                                             fetchData();
                                         } catch (e) { alert("Failed"); }
@@ -1598,7 +1598,7 @@ function CommissionModule({ currencySymbol }: any) {
                                         <th className="px-8 py-5">Participants</th>
                                         <th className="px-8 py-5">Workspace / Type</th>
                                         <th className="px-8 py-5 text-right">Agreed Value</th>
-                                        <th className="px-8 py-5 text-right">Commission</th>
+                                        <th className="px-8 py-5 text-right">Service Fee</th>
                                         <th className="px-8 py-5 text-center">Status</th>
                                         <th className="px-8 py-5 text-right">Actions</th>
                                     </tr>
@@ -1635,8 +1635,8 @@ function CommissionModule({ currencySymbol }: any) {
                                             <p className="text-[9px] font-bold text-neutral-400 uppercase"> Agreed Price</p>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <p className="font-black text-indigo-600 text-sm">{currencySymbol}{r.commissionAmount?.toFixed(2)}</p>
-                                            <p className="text-[9px] font-bold text-neutral-400 uppercase">Yield @ {r.commissionPercentage}%</p>
+                                            <p className="font-black text-indigo-600 text-sm">{currencySymbol}{r.serviceFeeAmount?.toFixed(2)}</p>
+                                            <p className="text-[9px] font-bold text-neutral-400 uppercase">Yield @ {r.serviceFeePercentage}%</p>
                                         </td>
                                         <td className="px-8 py-6 text-center">
                                             <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase border ${
@@ -1671,10 +1671,10 @@ function CommissionModule({ currencySymbol }: any) {
                                 </div>
                                 <div className="text-center lg:text-left border-l border-white/10 pl-12">
                                     <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Projected Platform Yield</p>
-                                    <p className="text-2xl font-black text-emerald-400">{currencySymbol}{records.reduce((acc, r) => acc + (r.commissionAmount || 0), 0).toLocaleString()}</p>
+                                    <p className="text-2xl font-black text-emerald-400">{currencySymbol}{records.reduce((acc, r) => acc + (r.serviceFeeAmount || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div className="text-center lg:text-left border-l border-white/10 pl-12">
-                                    <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Outstanding Commission</p>
+                                    <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest mb-1">Current Service Fee Balance</p>
                                     <p className="text-2xl font-black text-red-400">{currencySymbol}{records.reduce((acc, r) => acc + (r.status !== 'PAID' && r.status !== 'WAIVED' ? r.outstandingBalance : 0), 0).toLocaleString()}</p>
                                 </div>
                              </div>
@@ -1689,10 +1689,10 @@ function CommissionModule({ currencySymbol }: any) {
 
             {subTab === "vouchers" && <UsedVouchersList />}
 
-            {subTab === "settings" && <CommissionSettingsView />}
+            {subTab === "settings" && <ServiceFeeSettingsView />}
 
             {modalType === 'TIMELINE' && selectedJobId && (
-                <CommissionTimelineModal
+                <ServiceFeeTimelineModal
                     jobId={selectedJobId}
                     onClose={() => { setModalType(null); setSelectedJobId(null); }}
                 />
@@ -1701,7 +1701,7 @@ function CommissionModule({ currencySymbol }: any) {
     );
 }
 
-function CommissionSettingsView() {
+function ServiceFeeSettingsView() {
     const { countryCode } = useCountryStore();
     const [settings, setSettings] = useState<any>(null);
     const [saving, setExecuting] = useState(false);
@@ -1732,7 +1732,7 @@ function CommissionSettingsView() {
         <div className="bg-[#121212] rounded-[40px] p-12 text-white border border-white/5 space-y-10">
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Commission Protocol Config</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Service Fee Protocol Config</h3>
                     <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2">Operational thresholds and governance</p>
                 </div>
                 <button
@@ -1745,8 +1745,8 @@ function CommissionSettingsView() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                <SettingInput label="Default Commission %" value={settings.platformCommissionPercent} onChange={(v: string) => setSettings({...settings, platformCommissionPercent: parseFloat(v)})} />
-                <SettingInput label="Suspension Threshold" value={settings.commissionSuspensionThreshold} onChange={(v: string) => setSettings({...settings, commissionSuspensionThreshold: parseFloat(v)})} />
+                <SettingInput label="Default Service Fee %" value={settings.platformServiceFeePercent} onChange={(v: string) => setSettings({...settings, platformServiceFeePercent: parseFloat(v)})} />
+                <SettingInput label="Suspension Threshold" value={settings.serviceFeeSuspensionThreshold} onChange={(v: string) => setSettings({...settings, serviceFeeSuspensionThreshold: parseFloat(v)})} />
                 <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v: string) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
                 <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoSuspendEnabled: v})} />
                 <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoUnsuspendEnabled: v})} />
@@ -1821,7 +1821,7 @@ function UsedVouchersList() {
         const fetchVouchers = async () => {
             setLoading(true);
             try {
-                const res = await api.get(`/api/admin/finance/commissions/vouchers?countryCode=${countryCode}`);
+                const res = await api.get(`/api/admin/finance/service-fees/vouchers?countryCode=${countryCode}`);
                 setVouchers(res.data.data);
             } catch (e) {
                 console.error("Failed to load vouchers");
@@ -1880,14 +1880,14 @@ function UsedVouchersList() {
     );
 }
 
-function CommissionTimelineModal({ jobId, onClose }: { jobId: string, onClose: () => void }) {
+function ServiceFeeTimelineModal({ jobId, onClose }: { jobId: string, onClose: () => void }) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchTimeline = async () => {
             try {
-                const res = await api.get(`/api/admin/finance/commissions/timeline/${jobId}`);
+                const res = await api.get(`/api/admin/finance/service-fees/timeline/${jobId}`);
                 setData(res.data.data);
             } catch (e) {
                 console.error("Timeline fetch failed");
@@ -1932,8 +1932,8 @@ function CommissionTimelineModal({ jobId, onClose }: { jobId: string, onClose: (
                                             <p className="text-xl font-black text-blue-600">{getCurrency(data.jobId)}{data.jobId?.agreedPrice || data.acceptedPrice || 0}</p>
                                         </div>
                                         <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
-                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Platform Commission</p>
-                                            <p className="text-sm font-black text-indigo-600">{getCurrency(data.jobId)}{data.commissionAmount || 0} ({data.commissionPercentage || 0}%)</p>
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Service Fee</p>
+                                            <p className="text-sm font-black text-indigo-600">{getCurrency(data.jobId)}{data.serviceFeeAmount || 0} ({data.serviceFeePercentage || 0}%)</p>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <p className="text-[9px] font-black text-neutral-400 uppercase">Current Ledger Status</p>

@@ -49,12 +49,12 @@ export default function PricingManagement() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight uppercase">Pricing Command Center</h1>
-          <p className="text-neutral-500 font-medium">Configure global rules, regional surcharges, and commission tiers for {countryCode}.</p>
+          <p className="text-neutral-500 font-medium">Configure global rules, regional surcharges, and service fee tiers for {countryCode}.</p>
         </div>
         <div className="flex flex-wrap bg-neutral-100 p-1 rounded-2xl border border-neutral-200 shadow-inner">
             <TabButton active={activeTab === "country"} onClick={() => setActiveTab("country")} label="Country" />
             <TabButton active={activeTab === "rules"} onClick={() => setActiveTab("rules")} label="Service & Zone Rules" />
-            <TabButton active={activeTab === "commission"} onClick={() => setActiveTab("commission")} label="Commissions" />
+            <TabButton active={activeTab === "service-fee"} onClick={() => setActiveTab("service-fee")} label="Service Fees" />
             <TabButton active={activeTab === "pricebot"} onClick={() => setActiveTab("pricebot")} label="PriceBot AI" />
             <TabButton active={activeTab === "simulate"} onClick={() => setActiveTab("simulate")} label="Simulate" />
         </div>
@@ -66,7 +66,7 @@ export default function PricingManagement() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeTab === "country" && <CountryPricingSettings settings={settings} onSave={loadSettings} />}
             {activeTab === "rules" && <PricingRulesManager />}
-            {activeTab === "commission" && <CommissionManager />}
+            {activeTab === "service-fee" && <ServiceFeeManager />}
             {activeTab === "pricebot" && <PriceBotPanel />}
             {activeTab === "simulate" && <PriceSimulationTool />}
           </div>
@@ -113,7 +113,7 @@ function CountryPricingSettings({ settings, onSave }: { settings: any, onSave: (
                         <InputGroup label="Minimum Charge" name="minimumCharge" value={formData.minimumCharge} onChange={handleChange} suffix={formData.currencyCode} />
                         <InputGroup label="Callout Fee" name="calloutFee" value={formData.calloutFee} onChange={handleChange} suffix={formData.currencyCode} />
                         <InputGroup label="Cancellation Fee" name="cancellationFee" value={formData.cancellationFee} onChange={handleChange} suffix={formData.currencyCode} />
-                        <InputGroup label="Platform Commission (%)" name="platformCommissionPercent" value={formData.platformCommissionPercent} onChange={handleChange} suffix="%" />
+                        <InputGroup label="Service Fee (%)" name="platformServiceFeePercent" value={formData.platformServiceFeePercent} onChange={handleChange} suffix="%" />
                     </div>
                 </div>
 
@@ -319,31 +319,31 @@ function PricingRulesManager() {
     );
 }
 
-function CommissionManager() {
+function ServiceFeeManager() {
     const { countryCode } = useCountryStore();
-    const [commissions, setCommissions] = useState<any[]>([]);
+    const [serviceFees, setServiceFees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const loadCommissions = async () => {
+    const loadServiceFees = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/pricing/commissions?countryCode=${countryCode}`);
-            setCommissions(res.data.rules);
+            const res = await api.get(`/api/admin/pricing/service-fees?countryCode=${countryCode}`);
+            setServiceFees(res.data.rules);
         } catch (e) {
-            console.error('Failed to load commissions');
+            console.error('Failed to load service fees');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadCommissions();
+        loadServiceFees();
     }, [countryCode]);
 
     const handleUpdate = async (tier: string, percentage: number) => {
         try {
-            await api.post('/api/admin/pricing/commissions', { countryCode, tier, commissionPercentage: percentage });
-            loadCommissions();
+            await api.post('/api/admin/pricing/service-fees', { countryCode, tier, serviceFeePercentage: percentage });
+            loadServiceFees();
         } catch (e) {
             alert('Update failed');
         }
@@ -354,7 +354,7 @@ function CommissionManager() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {tiers.map((tier) => {
-                const rule = commissions.find(c => c.tier === tier);
+                const rule = serviceFees.find(c => c.tier === tier);
                 return (
                     <div key={tier} className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm group hover:border-brand-provider-green/30 transition-all text-center">
                         <p className={`text-[10px] font-black px-3 py-1 rounded-full inline-block mb-4 ${
@@ -366,13 +366,13 @@ function CommissionManager() {
                         <div className="mb-6">
                             <input
                                 type="number"
-                                defaultValue={rule?.commissionPercentage || 15}
+                                defaultValue={rule?.serviceFeePercentage || 15}
                                 onBlur={(e) => handleUpdate(tier, parseFloat(e.target.value))}
                                 className="text-4xl font-black text-neutral-900 bg-transparent text-center w-24 outline-none"
                             />
                             <span className="text-xl font-black text-neutral-400">%</span>
                         </div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-relaxed">Platform commission for {tier.toLowerCase()} tier providers.</p>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-relaxed">Service fee for {tier.toLowerCase()} tier providers.</p>
                     </div>
                 );
             })}
