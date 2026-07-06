@@ -1631,7 +1631,9 @@ function ServiceFeeModule({ currencySymbol }: any) {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <p className="font-black text-neutral-900 text-lg">{currencySymbol}{r.acceptedPrice?.toFixed(2)}</p>
+                                            <p className="font-black text-neutral-900 text-lg">
+                                                {r.acceptedPrice && r.acceptedPrice > 0 ? `${currencySymbol}${r.acceptedPrice.toFixed(2)}` : 'N/A'}
+                                            </p>
                                             <p className="text-[9px] font-bold text-neutral-400 uppercase"> Agreed Price</p>
                                         </td>
                                         <td className="px-8 py-6 text-right">
@@ -1942,7 +1944,11 @@ function ServiceFeeTimelineModal({ jobId, onClose }: { jobId: string, onClose: (
                                         </div>
                                         <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
                                             <p className="text-[9px] font-black text-neutral-400 uppercase">Agreed Job Price</p>
-                                            <p className="text-xl font-black text-blue-600">{getCurrency(data.jobId)}{data.jobId?.agreedPrice || data.acceptedPrice || 0}</p>
+                                            <p className="text-xl font-black text-blue-600">
+                                                {data.acceptedPrice && data.acceptedPrice > 0
+                                                    ? `${getCurrency(data.jobId)}${data.acceptedPrice}`
+                                                    : 'N/A'}
+                                            </p>
                                         </div>
                                         <div className="flex justify-between items-end border-b border-neutral-200 pb-4">
                                             <p className="text-[9px] font-black text-neutral-400 uppercase">Service Fee</p>
