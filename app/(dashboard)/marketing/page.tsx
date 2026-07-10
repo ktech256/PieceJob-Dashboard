@@ -209,20 +209,38 @@ function MarketingContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {referrals.map((ref) => (
-              <div key={ref._id} className="bg-white border border-neutral-200 rounded-[32px] p-8 shadow-sm flex justify-between items-center group">
-                 <div className="flex gap-6 items-center">
-                    <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center text-neutral-300">
-                       <Gift size={32} />
+              <div key={ref._id} className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm flex flex-col group">
+                 {ref.bannerUrl && (
+                    <div className="h-32 w-full relative">
+                       <img src={ref.bannerUrl} className="w-full h-full object-cover" alt="" />
+                       <div className="absolute top-4 left-4">
+                          <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${ref.isActive ? 'bg-green-500 text-white' : 'bg-neutral-500 text-white'}`}>
+                            {ref.isActive ? 'Active' : 'Draft'}
+                          </span>
+                       </div>
                     </div>
-                    <div>
-                       <h3 className="text-sm font-black uppercase">{ref.title}</h3>
-                       <p className="text-[10px] text-neutral-400 font-bold uppercase">{ref.rewardAmount} {ref.currency} Reward</p>
-                       <p className="text-[9px] text-neutral-300 font-bold mt-1 uppercase">Ends: {new Date(ref.endDate).toLocaleDateString()}</p>
+                 )}
+                 <div className="p-8 flex justify-between items-center">
+                    <div className="flex gap-6 items-center">
+                       {!ref.bannerUrl && (
+                          <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center text-neutral-300">
+                             <Gift size={32} />
+                          </div>
+                       )}
+                       <div>
+                          <h3 className="text-sm font-black uppercase">{ref.title}</h3>
+                          <p className="text-[10px] text-neutral-400 font-bold uppercase">{ref.rewardAmount} {ref.currency} Reward</p>
+                          {!ref.bannerUrl && (
+                             <span className={`inline-block mt-2 px-3 py-1 rounded-full text-[7px] font-black uppercase ${ref.isActive ? 'bg-green-500 text-white' : 'bg-neutral-500 text-white'}`}>
+                                {ref.isActive ? 'Active' : 'Draft'}
+                             </span>
+                          )}
+                       </div>
                     </div>
-                 </div>
-                 <div className="flex gap-2">
-                    <button onClick={() => { setEditingReferral(ref); setShowReferralModal(true); }} className="p-3 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
-                    <button onClick={() => handleDeleteReferral(ref._id)} className="p-3 bg-neutral-50 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 size={16} /></button>
+                    <div className="flex gap-2">
+                       <button onClick={() => { setEditingReferral(ref); setShowReferralModal(true); }} className="p-3 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
+                       <button onClick={() => handleDeleteReferral(ref._id)} className="p-3 bg-neutral-50 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 size={16} /></button>
+                    </div>
                  </div>
               </div>
             ))}
@@ -261,6 +279,7 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
     description: '',
     rewardAmount: 0,
     currency: 'R',
+    bannerUrl: '',
     maxRewardsPerReferral: 5,
     minCompletedJobs: 1,
     rewardDelayDays: 0,
@@ -319,6 +338,17 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
               value={form.description}
               onChange={e => setForm({...form, description: e.target.value})}
               className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all resize-none h-20"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Banner Image Key / URL</label>
+            <input
+              type="text"
+              value={form.bannerUrl}
+              onChange={e => setForm({...form, bannerUrl: e.target.value})}
+              placeholder="e.g. marketing/referral_banner.png"
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all"
             />
           </div>
 
