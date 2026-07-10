@@ -1373,8 +1373,57 @@ function ReferralCentre({ currencySymbol }: any) {
 }
 
 function EscrowMonitor({ currencySymbol, activeEscrow }: any) {
+    const { countryCode } = useCountryStore();
+    const [settings, setSettings] = useState<any>(null);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const res = await api.get(`/api/admin/settings?countryCode=${countryCode}`);
+                setSettings(res.data.settings);
+            } catch (e) {
+                console.error("Failed to load settings in EscrowMonitor");
+            }
+        };
+        if (countryCode) loadSettings();
+    }, [countryCode]);
+
+    const handleToggle = async (val: boolean) => {
+        setSaving(true);
+        try {
+            const updatedSettings = { ...settings, isEscrowEnabled: val };
+            await api.post(`/api/admin/settings`, { ...updatedSettings, countryCode });
+            setSettings(updatedSettings);
+        } catch (e) {
+            alert("Failed to update Escrow state");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-neutral-900">
+            <div className="bg-[#121212] rounded-[48px] p-12 text-white border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                <div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Escrow Protocol Control</h3>
+                    <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2">Workspace-level financial security switch</p>
+                </div>
+                <div className="flex items-center gap-6 bg-white/5 border border-white/10 rounded-[32px] px-8 py-6">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Escrow System</p>
+                        <p className="text-[8px] font-bold text-neutral-500 uppercase mt-1">Status: {settings?.isEscrowEnabled ? 'ACTIVE' : 'OFF'}</p>
+                    </div>
+                    <button
+                        onClick={() => handleToggle(!settings?.isEscrowEnabled)}
+                        disabled={saving || !settings}
+                        className={`w-14 h-8 rounded-full transition-all relative ${settings?.isEscrowEnabled ? 'bg-brand-provider-green' : 'bg-neutral-700'} ${saving ? 'opacity-50' : ''}`}
+                    >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.isEscrowEnabled ? 'right-1' : 'left-1'}`}></div>
+                    </button>
+                </div>
+            </div>
+
             <div className="bg-[#0A0A0A] p-20 rounded-[56px] text-white flex justify-between items-center shadow-2xl relative overflow-hidden border border-white/5 group">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(251,191,36,0.1),transparent)] group-hover:opacity-100 transition-opacity opacity-50"></div>
                 <div className="relative z-10">
@@ -1959,7 +2008,6 @@ function ServiceFeeSettingsView() {
                 <SettingInput label="Default Service Fee %" value={settings.platformServiceFeePercent} onChange={(v: string) => setSettings({...settings, platformServiceFeePercent: parseFloat(v)})} />
                 <SettingInput label="Suspension Threshold" value={settings.serviceFeeSuspensionThreshold} onChange={(v: string) => setSettings({...settings, serviceFeeSuspensionThreshold: parseFloat(v)})} />
                 <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v: string) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
-                <SettingToggle label="Escrow System" value={settings.isEscrowEnabled} onChange={(v: boolean) => setSettings({...settings, isEscrowEnabled: v})} />
                 <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoSuspendEnabled: v})} />
                 <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoUnsuspendEnabled: v})} />
             </div>
