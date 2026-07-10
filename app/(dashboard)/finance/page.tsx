@@ -256,7 +256,7 @@ function WalletList({ role, currencySymbol }: any) {
           <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
             <tr>
               <th className="px-8 py-4">{role}</th>
-              <th className="px-8 py-4 text-right">Available</th>
+              <th className="px-8 py-4 text-right">Platform Balance</th>
               <th className="px-8 py-4 text-right">Referral</th>
               <th className="px-8 py-4 text-right">Bonus</th>
               {role === 'PROVIDER' && <th className="px-8 py-4 text-right">Escrow</th>}
@@ -1959,6 +1959,7 @@ function ServiceFeeSettingsView() {
                 <SettingInput label="Default Service Fee %" value={settings.platformServiceFeePercent} onChange={(v: string) => setSettings({...settings, platformServiceFeePercent: parseFloat(v)})} />
                 <SettingInput label="Suspension Threshold" value={settings.serviceFeeSuspensionThreshold} onChange={(v: string) => setSettings({...settings, serviceFeeSuspensionThreshold: parseFloat(v)})} />
                 <SettingInput label="Max Negotiation Rounds" value={settings.maxNegotiationRounds} onChange={(v: string) => setSettings({...settings, maxNegotiationRounds: parseInt(v)})} />
+                <SettingToggle label="Escrow System" value={settings.isEscrowEnabled} onChange={(v: boolean) => setSettings({...settings, isEscrowEnabled: v})} />
                 <SettingToggle label="Auto Suspend Providers" value={settings.autoSuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoSuspendEnabled: v})} />
                 <SettingToggle label="Auto Unsuspend on Payment" value={settings.autoUnsuspendEnabled} onChange={(v: boolean) => setSettings({...settings, autoUnsuspendEnabled: v})} />
             </div>

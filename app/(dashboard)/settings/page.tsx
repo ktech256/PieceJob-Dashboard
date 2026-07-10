@@ -67,6 +67,7 @@ export default function SettingsPage() {
           >
               <div className="space-y-4 mt-6">
                   <SettingRow label="Service Fee" value={`${settings?.platformServiceFeePercent}%`} />
+                  <SettingRow label="Escrow System" value={settings?.isEscrowEnabled ? 'ENABLED' : 'DISABLED'} highlight={settings?.isEscrowEnabled} />
                   <SettingRow label="Escrow Cooling" value={`${settings?.escrowCoolingPeriodHours} hours`} />
                   <SettingRow label="Currency" value={settings?.currency || 'USD'} />
               </div>
