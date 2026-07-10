@@ -128,6 +128,7 @@ export default function FinanceControlCentre() {
     { id: "service-fees", label: "Service Fees", icon: <Coins size={14} /> },
     { id: "customers", label: "Customers", icon: <User size={14} /> },
     { id: "providers", label: "Providers", icon: <HardHat size={14} /> },
+    { id: "manual-credit", label: "Manual Credit", icon: <Coins size={14} /> },
     { id: "ledger", label: "Ledger", icon: <History size={14} /> },
     { id: "withdrawals", label: "Withdrawals", icon: <ArrowDownCircle size={14} /> },
     { id: "refunds", label: "Refunds", icon: <Undo size={14} /> },
@@ -181,6 +182,7 @@ export default function FinanceControlCentre() {
       {activeTab === "service-fees" && <ServiceFeeModule currencySymbol={stats.currencySymbol} />}
       {activeTab === "customers" && <WalletList role="CUSTOMER" currencySymbol={stats.currencySymbol} />}
       {activeTab === "providers" && <WalletList role="PROVIDER" currencySymbol={stats.currencySymbol} />}
+      {activeTab === "manual-credit" && <ManualCreditModule currencySymbol={stats.currencySymbol} />}
       {activeTab === "ledger" && <LedgerExplorer currencySymbol={stats.currencySymbol} />}
       {activeTab === "withdrawals" && <WithdrawalManager currencySymbol={stats.currencySymbol} />}
       {activeTab === "refunds" && <RefundCentre currencySymbol={stats.currencySymbol} />}
@@ -610,6 +612,213 @@ function DetailRow({ label, value, highlight, color = 'text-neutral-900' }: any)
         <div className="space-y-1">
             <p className="text-[9px] font-black uppercase text-neutral-400 tracking-widest">{label}</p>
             <p className={`${highlight ? 'font-black text-sm' : 'font-bold text-xs'} ${color} uppercase`}>{value || 'N/A'}</p>
+        </div>
+    );
+}
+
+function ManualCreditModule({ currencySymbol }: any) {
+    const { countryCode } = useCountryStore();
+    const [providers, setProviders] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [selectedProvider, setSelectedProvider] = useState<any>(null);
+    const [amount, setAmount] = useState("");
+    const [reason, setReason] = useState("");
+    const [notes, setNotes] = useState("");
+    const [executing, setExecuting] = useState(false);
+
+    const fetchProviders = async () => {
+        setLoading(true);
+        try {
+            // Reusing wallet list to find providers with their current balances
+            const res = await api.get(`/api/admin/finance/wallets?role=PROVIDER&countryCode=${countryCode}`);
+            setProviders(res.data.data || []);
+        } catch (e) {
+            console.error('Failed to load providers');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (countryCode) fetchProviders();
+    }, [countryCode]);
+
+    const handleCredit = async () => {
+        if (!selectedProvider || !amount || parseFloat(amount) <= 0 || !reason) {
+            return alert("Please fill in all mandatory fields.");
+        }
+
+        if (!confirm(`Are you sure you want to credit ${selectedProvider.user.firstName} with ${currencySymbol}${amount}?`)) {
+            return;
+        }
+
+        setExecuting(true);
+        try {
+            await api.post(`/api/admin/finance/manual-credit`, {
+                providerId: selectedProvider.user._id,
+                amount: parseFloat(amount),
+                reason,
+                notes
+            });
+            alert("Manual credit issued successfully.");
+            setAmount("");
+            setReason("");
+            setNotes("");
+            setSelectedProvider(null);
+            fetchProviders();
+        } catch (e: any) {
+            alert(e.response?.data?.message || "Failed to issue manual credit.");
+        } finally {
+            setExecuting(false);
+        }
+    };
+
+    const filtered = providers.filter(p =>
+        p.user.firstName.toLowerCase().includes(search.toLowerCase()) ||
+        p.user.lastName.toLowerCase().includes(search.toLowerCase()) ||
+        p.user.email.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in duration-500 text-neutral-900">
+            <div className="xl:col-span-2 bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm flex flex-col min-h-[600px]">
+                <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Provider Selection</h3>
+                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Select a provider to issue manual credit</p>
+                    </div>
+                    <div className="relative w-full md:w-64">
+                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={14} />
+                         <input
+                            type="text"
+                            placeholder="Search Provider..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-white border border-neutral-200 rounded-xl pl-10 pr-4 py-2 text-xs font-bold outline-none focus:border-black transition-all"
+                         />
+                    </div>
+                </div>
+                <div className="overflow-x-auto flex-1">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                            <tr>
+                                <th className="px-8 py-4">Provider</th>
+                                <th className="px-8 py-4 text-right">Credit Balance</th>
+                                <th className="px-8 py-4 text-right">Available</th>
+                                <th className="px-8 py-4 text-right">Status</th>
+                                <th className="px-8 py-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50 text-sm font-medium">
+                            {loading ? (
+                                <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 uppercase font-black text-[10px] tracking-widest animate-pulse">Loading Providers...</td></tr>
+                            ) : filtered.length === 0 ? (
+                                <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No providers matching search.</td></tr>
+                            ) : (
+                                filtered.map((p) => (
+                                    <tr key={p.user?._id} className={`hover:bg-neutral-50 transition-all group ${selectedProvider?.user?._id === p.user?._id ? 'bg-blue-50/50' : ''}`}>
+                                        <td className="px-8 py-4">
+                                            <p className="font-black text-neutral-800">{p.user?.firstName} {p.user?.lastName}</p>
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{p.user?.email}</p>
+                                        </td>
+                                        <td className="px-8 py-4 text-right font-black text-green-600">{currencySymbol}{(p.wallet?.balanceCredit || 0).toFixed(2)}</td>
+                                        <td className="px-8 py-4 text-right text-neutral-500">{currencySymbol}{(p.wallet?.balanceMain || 0).toFixed(2)}</td>
+                                        <td className="px-8 py-4 text-right">
+                                             <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${p.wallet?.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {p.wallet?.status || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-4 text-right">
+                                            <button
+                                                onClick={() => setSelectedProvider(p)}
+                                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                                    selectedProvider?.user?._id === p.user?._id
+                                                    ? 'bg-neutral-900 text-white'
+                                                    : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+                                                }`}
+                                            >
+                                                {selectedProvider?.user?._id === p.user?._id ? 'Selected' : 'Select'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="bg-[#121212] rounded-[32px] p-10 text-white shadow-2xl h-fit sticky top-8 border border-white/5">
+                <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center text-blue-500 mb-8">
+                    <Coins size={32} />
+                </div>
+                <h4 className="font-black text-xl uppercase tracking-tight mb-2">Manual Credit Auth</h4>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-8">Authorized adjustment of Credit Balance</p>
+
+                <div className="space-y-6 text-sm">
+                    {selectedProvider ? (
+                        <div className="p-4 bg-white/5 border border-white/10 rounded-2xl mb-6">
+                            <p className="text-[9px] font-black uppercase text-neutral-500 tracking-widest mb-1">Active Target</p>
+                            <p className="font-black text-blue-400">{selectedProvider.user.firstName} {selectedProvider.user.lastName}</p>
+                            <p className="text-[10px] text-neutral-400">{selectedProvider.user.email}</p>
+                        </div>
+                    ) : (
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-6 flex items-center gap-3">
+                             <AlertTriangle size={16} className="text-amber-500" />
+                             <p className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Please select a provider from the list</p>
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Credit Amount ({currencySymbol})</label>
+                        <input
+                            type="number"
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-blue-500 transition-all"
+                            placeholder="0.00"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Standardized Reason</label>
+                        <select
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-blue-500 transition-all cursor-pointer"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                        >
+                            <option value="">Select Reason...</option>
+                            <option value="Voucher Correction">Voucher Correction</option>
+                            <option value="Missing Credit Adjustment">Missing Credit Adjustment</option>
+                            <option value="Customer Support Adjustment">Customer Support Adjustment</option>
+                            <option value="Promotional Bonus">Promotional Bonus</option>
+                            <option value="Goodwill Credit">Goodwill Credit</option>
+                            <option value="Admin Correction">Admin Correction</option>
+                            <option value="Accounting Adjustment">Accounting Adjustment</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-500 ml-1">Internal Notes</label>
+                        <textarea
+                            className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-xs font-bold outline-none focus:border-blue-500 transition-all resize-none h-24"
+                            placeholder="Detailed justification for audit log..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleCredit}
+                        disabled={executing || !selectedProvider}
+                        className="w-full bg-blue-600 text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50"
+                    >
+                        {executing ? 'Executing Protocol...' : 'Issue Manual Credit'}
+                    </button>
+                    <p className="text-[10px] text-neutral-500 font-medium leading-relaxed italic text-center">This operation only impacts the "Credit" balance and is fully logged.</p>
+                </div>
+            </div>
         </div>
     );
 }
