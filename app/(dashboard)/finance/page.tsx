@@ -1306,13 +1306,18 @@ function BonusCentre({ currencySymbol }: any) {
 function ReferralCentre({ currencySymbol }: any) {
     const { countryCode } = useCountryStore();
     const [data, setData] = useState<any[]>([]);
+    const [analytics, setAnalytics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchReferrals = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/finance/referrals?countryCode=${countryCode}`);
-            setData(res.data.data || []);
+            const [refRes, anaRes] = await Promise.all([
+                api.get(`/api/admin/finance/referrals?countryCode=${countryCode}`),
+                api.get(`/api/admin/finance/referrals/analytics?countryCode=${countryCode}`)
+            ]);
+            setData(refRes.data.data || []);
+            setAnalytics(anaRes.data.data);
         } catch (e) {
             console.error('Failed to load referrals');
         } finally {
@@ -1321,53 +1326,118 @@ function ReferralCentre({ currencySymbol }: any) {
     };
 
     useEffect(() => {
-        fetchReferrals();
+        if (countryCode) fetchData();
     }, [countryCode]);
 
+    const handleTogglePrivileges = async (userId: string, isDisabled: boolean) => {
+        if (!confirm(`Are you sure you want to ${isDisabled ? 'disable' : 'enable'} referral privileges for this user?`)) return;
+        try {
+            await api.post(`/api/admin/finance/referrals/toggle-privileges`, { userId, isDisabled });
+            alert("Privileges updated");
+            fetchData();
+        } catch (e) {
+            alert("Failed to update privileges");
+        }
+    };
+
     return (
-        <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm animate-in fade-in duration-500">
-            <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center text-neutral-900">
-                <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Referral Reward Oracle</h3>
-                <button onClick={fetchReferrals} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {analytics && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <FinanceCard label="Total Referrals" value={analytics.totalReferrals.toString()} sub="Total Registered" color="blue" />
+                    <FinanceCard label="Successful" value={analytics.successfulReferrals.toString()} sub="Rewarded Jobs" color="green" />
+                    <FinanceCard label="Rewards Issued" value={`${currencySymbol}${analytics.rewardsIssued.toLocaleString()}`} sub="Total Payout" color="indigo" />
+                    <FinanceCard label="Pending" value={`${currencySymbol}${analytics.rewardsPending.toLocaleString()}`} sub="In Queue" color="amber" />
+                </div>
+            )}
+
+            <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center text-neutral-900">
+                    <div>
+                        <h3 className="font-black text-lg text-neutral-800 uppercase tracking-tight">Referral Reward Oracle</h3>
+                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Audit Log of issued referral rewards</p>
+                    </div>
+                    <button onClick={fetchData} className="p-2 hover:bg-neutral-200 rounded-xl transition-all"><RefreshCcw size={16} /></button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
+                        <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                            <tr>
+                                <th className="px-8 py-4">Participant Cycle</th>
+                                <th className="px-8 py-4">Job / Context</th>
+                                <th className="px-8 py-4 text-right">Yield</th>
+                                <th className="px-8 py-4 text-center">Status</th>
+                                <th className="px-8 py-4 text-right">Fulfillment</th>
+                                <th className="px-8 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50 text-sm font-medium">
+                            {loading ? (
+                                <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 uppercase font-black text-[10px] animate-pulse tracking-widest">Scanning Referral Pool...</td></tr>
+                            ) : data.length === 0 ? (
+                                <tr><td colSpan={6} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No incentives generated in this workspace.</td></tr>
+                            ) : (
+                                data.map((r) => (
+                                    <tr key={r._id} className="hover:bg-neutral-50 transition-all group">
+                                        <td className="px-8 py-5">
+                                            <div className="flex flex-col gap-1">
+                                                <p className="font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</p>
+                                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">Referrer Node</p>
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <ArrowRight size={8} className="text-neutral-300" />
+                                                    <p className="text-[10px] font-bold text-neutral-500">Referred: {r.referredId?.firstName} {r.referredId?.lastName}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <p className="text-xs font-bold text-blue-600 font-mono">#{r.jobId?.slice(-6)}</p>
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase">Qualifying Job</p>
+                                        </td>
+                                        <td className="px-8 py-5 font-black text-green-600 text-right">{currencySymbol}{r.amount.toFixed(2)}</td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase border ${
+                                                r.status === 'REWARDED' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                r.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                'bg-red-50 text-red-700 border-red-100'
+                                            }`}>{r.status}</span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right text-xs text-neutral-400 font-black uppercase tracking-tighter">{formatDate(r.createdAt)}</td>
+                                        <td className="px-8 py-5 text-right">
+                                            <button
+                                                onClick={() => handleTogglePrivileges(r.toUserId?._id, true)}
+                                                className="p-2 bg-neutral-100 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                title="Suspend Referral Privileges"
+                                            >
+                                                <Ban size={12} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
-                    <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
-                        <tr>
-                            <th className="px-8 py-4">Reward ID</th>
-                            <th className="px-8 py-4">Incentivized User</th>
-                            <th className="px-8 py-4 text-right">Yield</th>
-                            <th className="px-8 py-4 text-center">Status</th>
-                            <th className="px-8 py-4 text-right">Fulfillment</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-50 text-sm font-medium">
-                        {loading ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 uppercase font-black text-[10px] animate-pulse tracking-widest">Scanning Referral Pool...</td></tr>
-                        ) : data.length === 0 ? (
-                            <tr><td colSpan={5} className="px-8 py-10 text-center text-neutral-400 font-bold uppercase text-[10px]">No incentives generated in this workspace.</td></tr>
-                        ) : (
-                            data.map((r) => (
-                                <tr key={r._id} className="hover:bg-neutral-50 transition-all group">
-                                    <td className="px-8 py-5 font-mono text-xs font-bold text-neutral-500">{r.transactionId}</td>
-                                    <td className="px-8 py-5">
-                                        <p className="font-black text-neutral-800">{r.toUserId?.firstName} {r.toUserId?.lastName}</p>
-                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">Referrer Node</p>
-                                    </td>
-                                    <td className="px-8 py-5 font-black text-green-600 text-right">{currencySymbol}{r.amount.toFixed(2)}</td>
-                                    <td className="px-8 py-5 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-                                            <span className="text-[10px] font-black uppercase text-green-800">DISBURSED</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5 text-right text-xs text-neutral-400 font-black uppercase tracking-tighter">{formatDate(r.createdAt)}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+
+            {analytics?.topReferrers?.length > 0 && (
+                <div className="bg-white border border-neutral-200 rounded-[32px] p-8">
+                    <h3 className="font-black text-lg uppercase tracking-tight mb-6">Top Referrers in {countryCode}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {analytics.topReferrers.map((ref: any) => (
+                            <div key={ref._id} className="flex justify-between items-center p-4 bg-neutral-50 rounded-2xl">
+                                <div>
+                                    <p className="font-black text-sm">{ref.name}</p>
+                                    <p className="text-[10px] font-bold text-neutral-400 uppercase">{ref.email}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-black text-indigo-600">{ref.count}</p>
+                                    <p className="text-[8px] font-black text-neutral-400 uppercase">Referrals</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

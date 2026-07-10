@@ -261,6 +261,9 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
     description: '',
     rewardAmount: 0,
     currency: 'R',
+    maxRewardsPerReferral: 5,
+    minCompletedJobs: 1,
+    rewardDelayDays: 0,
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
     isActive: true,
@@ -290,18 +293,18 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
 
   return (
     <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
-      <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-200">
         <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tight">{campaign ? 'Update' : 'Initialize'} Referral Campaign</h3>
-            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Workspace Target: {form.countryCode}</p>
+            <h3 className="text-xl font-black uppercase tracking-tight">{campaign ? 'Update' : 'Initialize'} Referral Protocol</h3>
+            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Workspace Node: {form.countryCode}</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
         </div>
 
-        <div className="p-10 grid grid-cols-2 gap-6">
+        <div className="p-10 grid grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
           <div className="col-span-2">
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Campaign Title</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Campaign Headline</label>
             <input
               type="text"
               value={form.title}
@@ -311,16 +314,16 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
           </div>
 
           <div className="col-span-2">
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Short Description</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Engagement Description</label>
             <textarea
               value={form.description}
               onChange={e => setForm({...form, description: e.target.value})}
-              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all"
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all resize-none h-20"
             />
           </div>
 
           <div>
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Reward Amount</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Reward Yield</label>
             <input
               type="number"
               value={form.rewardAmount}
@@ -330,7 +333,7 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
           </div>
 
           <div>
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Currency</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Currency Code</label>
             <input
               type="text"
               value={form.currency}
@@ -340,7 +343,46 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
           </div>
 
           <div>
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Start Date</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Max Rewards / User</label>
+            <input
+              type="number"
+              value={form.maxRewardsPerReferral}
+              onChange={e => setForm({...form, maxRewardsPerReferral: parseInt(e.target.value)})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Min. Jobs to Qualify</label>
+            <input
+              type="number"
+              value={form.minCompletedJobs}
+              onChange={e => setForm({...form, minCompletedJobs: parseInt(e.target.value)})}
+              className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+            />
+          </div>
+
+          <div>
+             <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Payout Delay (Days)</label>
+             <input
+               type="number"
+               value={form.rewardDelayDays}
+               onChange={e => setForm({...form, rewardDelayDays: parseInt(e.target.value)})}
+               className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all"
+             />
+          </div>
+
+          <div className="flex items-end pb-1">
+             <button
+                onClick={() => setForm({...form, isActive: !form.isActive})}
+                className={`w-full py-3 rounded-xl border text-[9px] font-black uppercase transition-all ${form.isActive ? 'bg-green-50 border-green-200 text-green-700' : 'bg-neutral-100 border-neutral-200 text-neutral-400'}`}
+             >
+                Campaign {form.isActive ? 'ACTIVE' : 'DORMANT'}
+             </button>
+          </div>
+
+          <div>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Deployment Date</label>
             <input
               type="date"
               value={form.startDate.split('T')[0]}
@@ -350,7 +392,7 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
           </div>
 
           <div>
-            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">End Date</label>
+            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Termination Date</label>
             <input
               type="date"
               value={form.endDate.split('T')[0]}
@@ -361,13 +403,13 @@ function ReferralModal({ campaign, workspaceCode, onClose, onSave }: any) {
         </div>
 
         <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
-          <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all">Abort</button>
+          <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all active:scale-95 shadow-sm">Abort</button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all disabled:opacity-50"
+            className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all disabled:opacity-50 active:scale-95 shadow-xl"
           >
-            {saving ? 'Persisting...' : 'Activate Campaign'}
+            {saving ? 'Processing Encryption...' : 'Commit Protocol Auth'}
           </button>
         </div>
       </div>
