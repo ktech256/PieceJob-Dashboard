@@ -23,6 +23,8 @@ import {
   Gift
 } from 'lucide-react';
 
+import AffiliatePartnerList from '@/components/marketing/AffiliatePartnerList';
+
 export default function MarketingPage() {
     return (
         <Suspense fallback={<div>Loading Marketing Hub...</div>}>
@@ -118,6 +120,12 @@ function MarketingContent() {
             className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'referrals' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
           >
             Invite & Earn
+          </button>
+          <button
+            onClick={() => setActiveTab('affiliates')}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'affiliates' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
+          >
+            Affiliate Partners
           </button>
           <button
             onClick={() => setActiveTab('notifications')}
@@ -246,6 +254,10 @@ function MarketingContent() {
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'affiliates' && (
+        <AffiliatePartnerList countryCode={countryCode} />
       )}
 
       {activeTab === 'notifications' && (
