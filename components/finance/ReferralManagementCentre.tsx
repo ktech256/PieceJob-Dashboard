@@ -267,7 +267,14 @@ export default function ReferralManagementCentre({ countryCode, currencySymbol }
                             <div>
                                 <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest mb-6">Discovery branding</h4>
                                 <div className="space-y-4">
-                                    <InputItem label="Base URL" value={settings.referralBaseUrl} onChange={(v:any) => setSettings({...settings, referralBaseUrl: v})} icon={<Globe size={14} />} />
+                                    <InputItem
+                                        label="Base URL"
+                                        value={settings.referralBaseUrl}
+                                        onChange={(v:any) => setSettings({...settings, referralBaseUrl: v})}
+                                        icon={<Globe size={14} />}
+                                        placeholder="https://piecejob.co/r/"
+                                    />
+                                    <p className="text-[9px] text-neutral-400 px-1 font-bold">Standard format: https://piecejob.co/r/</p>
                                     <InputItem label="QR Logo Overlay" type="select" value={settings.referralQrBranding || 'PIECEJOB'} options={['PIECEJOB', 'WORKSPACE', 'NONE']} icon={<QrCode size={14} />} onChange={(v:any) => setSettings({...settings, referralQrBranding: v})} />
                                 </div>
                             </div>
@@ -605,7 +612,7 @@ function AnalyticCard({ label, value, sub, color }: any) {
     );
 }
 
-function InputItem({ label, value, sub, onChange, type = 'text', options = [], disabled = false, icon }: any) {
+function InputItem({ label, value, sub, onChange, type = 'text', options = [], disabled = false, icon, placeholder }: any) {
     return (
         <div className="space-y-3">
             <label className="text-[9px] font-black uppercase text-neutral-400 ml-1 flex items-center gap-2">
@@ -628,6 +635,7 @@ function InputItem({ label, value, sub, onChange, type = 'text', options = [], d
                     <input
                         type={type === 'number' ? 'number' : 'text'}
                         value={value}
+                        placeholder={placeholder}
                         onChange={e => onChange && onChange(e.target.value)}
                         disabled={disabled}
                         className={`w-full bg-neutral-50 border border-neutral-100 rounded-2xl ${sub ? 'pl-10' : 'px-6'} py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all ${disabled ? 'opacity-50' : ''}`}
