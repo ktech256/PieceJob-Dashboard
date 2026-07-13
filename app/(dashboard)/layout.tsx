@@ -30,7 +30,8 @@ import {
   Activity,
   RotateCcw,
   Megaphone,
-  Gift
+  Gift,
+  Mail
 } from "lucide-react";
 
 export default function DashboardLayout({
