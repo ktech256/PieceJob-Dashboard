@@ -82,10 +82,36 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
   const [testResult, setTestResult] = useState<any>(null);
   const [testEmail, setTestEmail] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
+  const [logoValid, setLogoValid] = useState<boolean | null>(null);
 
   useEffect(() => {
     loadConfig();
   }, [countryCode]);
+
+  const validateLogoUrl = async (url: string) => {
+    if (!url) {
+        setLogoValid(null);
+        return;
+    }
+
+    // Basic format check
+    if (!url.startsWith('https://')) {
+        setLogoValid(false);
+        return;
+    }
+
+    try {
+        const res = await fetch(url, { method: 'HEAD' });
+        const contentType = res.headers.get('content-type');
+        if (res.ok && contentType?.startsWith('image/')) {
+            setLogoValid(true);
+        } else {
+            setLogoValid(false);
+        }
+    } catch (e) {
+        setLogoValid(false);
+    }
+  };
 
   const loadConfig = async () => {
     setLoading(true);
@@ -326,13 +352,21 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
               <div className="col-span-2 space-y-3">
                 <label className="text-[10px] font-black uppercase text-neutral-400 ml-1 tracking-widest">Workspace Logo Assets (URL)</label>
                 <div className="flex gap-4">
-                    <input
-                        type="text"
-                        value={config.branding.logoUrl || ''}
-                        onChange={e => setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}})}
-                        className="flex-1 bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-bold outline-none focus:border-neutral-900 transition-all"
-                    />
-                    <div className="w-16 h-14 bg-neutral-100 rounded-2xl border border-neutral-200 flex items-center justify-center overflow-hidden">
+                    <div className="flex-1 space-y-2">
+                        <input
+                            type="text"
+                            value={config.branding.logoUrl || ''}
+                            onChange={e => {
+                                setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}});
+                                validateLogoUrl(e.target.value);
+                            }}
+                            placeholder="https://piecejob.co/assets/logos/..."
+                            className={`w-full bg-neutral-50 border ${logoValid === false ? 'border-red-500' : logoValid === true ? 'border-green-500' : 'border-neutral-200'} rounded-2xl px-6 py-4 text-xs font-bold outline-none focus:border-neutral-900 transition-all`}
+                        />
+                        {logoValid === false && <p className="text-[9px] text-red-500 font-bold uppercase ml-2">Invalid Asset: Ensure HTTPS and public image access</p>}
+                        {logoValid === true && <p className="text-[9px] text-green-500 font-bold uppercase ml-2">Asset Verified & Linked</p>}
+                    </div>
+                    <div className="w-16 h-14 bg-neutral-100 rounded-2xl border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
                         {config.branding.logoUrl ? <img src={config.branding.logoUrl} className="max-w-full max-h-full object-contain" /> : <Mail className="text-neutral-300" />}
                     </div>
                 </div>
