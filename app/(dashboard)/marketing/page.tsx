@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import AffiliatePartnerList from '@/components/marketing/AffiliatePartnerList';
+import EmailCentreHub from './email-centre/EmailCentreHub';
 
 export default function MarketingPage() {
     return (
@@ -132,6 +133,12 @@ function MarketingContent() {
             className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'notifications' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
           >
             Global Push
+          </button>
+          <button
+            onClick={() => setActiveTab('email')}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'email' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
+          >
+            Email Centre
           </button>
         </div>
       </div>
@@ -262,6 +269,10 @@ function MarketingContent() {
 
       {activeTab === 'notifications' && (
         <PushNotificationComposer workspaceCode={countryCode} />
+      )}
+
+      {activeTab === 'email' && (
+        <EmailCentreHub />
       )}
 
       {showPromoModal && (

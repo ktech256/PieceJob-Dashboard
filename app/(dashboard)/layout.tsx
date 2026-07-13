@@ -71,7 +71,8 @@ export default function DashboardLayout({
   const menuItems = [
     { name: "Analytics", href: "/analytics", icon: <BarChart3 size={18} /> },
     { name: "Live Jobs", href: "/jobs", icon: <ClipboardList size={18} /> },
-    { name: "Marketing", href: "/marketing", icon: <Megaphone size={18} /> },
+    { name: "Marketing Hub", href: "/marketing", icon: <Megaphone size={18} /> },
+    { name: "Email Centre", href: "/marketing?tab=email", icon: <Mail size={18} /> },
     { name: "Referrals", href: "/marketing?tab=referrals", icon: <Gift size={18} /> },
     { name: "Finance", href: "/finance", icon: <Wallet size={18} /> },
     { name: "Workspace Settings", href: "/settings", icon: <Settings size={18} /> },
