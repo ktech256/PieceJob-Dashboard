@@ -61,6 +61,10 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testEmail, setTestEmail] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -87,6 +91,32 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
       alert('Failed to update email configuration');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await api.get(`/api/v1/email-centre/config/test-smtp?countryCode=${countryCode}`);
+      setTestResult(res.data.data);
+    } catch (e: any) {
+      setTestResult({ success: false, message: e.response?.data?.message || 'Connection timeout' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail) return alert('Enter recipient email');
+    setSendingTest(true);
+    try {
+        await api.post(`/api/v1/email-centre/config/send-test?countryCode=${countryCode}`, { recipient: testEmail });
+        alert('Test email queued successfully');
+    } catch (e) {
+        alert('Failed to send test email');
+    } finally {
+        setSendingTest(false);
     }
   };
 
@@ -157,7 +187,27 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
           </div>
 
           <div className="space-y-4 pt-6 border-t border-neutral-100">
-             <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">SMTP Authentication</h4>
+             <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">SMTP Authentication</h4>
+                <button
+                    onClick={handleTestSmtp}
+                    disabled={testing}
+                    className="text-[9px] font-black uppercase text-brand-customer-red hover:underline flex items-center gap-2"
+                >
+                    {testing ? <RefreshCw size={12} className="animate-spin" /> : <Activity size={12} />} Run Diagnostics
+                </button>
+             </div>
+
+             {testResult && (
+                 <div className={`p-4 rounded-2xl border ${testResult.success ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'} animate-in fade-in slide-in-from-top-2`}>
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black uppercase">{testResult.message}</p>
+                        {testResult.latency && <p className="text-[9px] font-bold uppercase">Latency: {testResult.latency}ms</p>}
+                    </div>
+                    {!testResult.success && testResult.error && <p className="text-[9px] font-medium mt-1 font-mono">{testResult.error}</p>}
+                 </div>
+             )}
+
              <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-2">
                   <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">SMTP Host</label>
@@ -284,10 +334,30 @@ function SenderConfig({ countryCode }: { countryCode: string }) {
            <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-brand-customer-red text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition-all shadow-xl shadow-red-100 active:scale-95 disabled:opacity-50"
+              className="w-full bg-brand-customer-red text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition-all shadow-xl shadow-red-100 active:scale-95 disabled:opacity-50 mb-6"
            >
               {saving ? 'Processing...' : 'Apply System Changes'}
            </button>
+
+           <div className="pt-6 border-t border-neutral-100 space-y-4">
+                <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Send Test Signal</h4>
+                <div className="space-y-2">
+                    <input
+                        type="email"
+                        value={testEmail}
+                        onChange={e => setTestEmail(e.target.value)}
+                        placeholder="test@example.com"
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none focus:border-neutral-900 transition-all"
+                    />
+                    <button
+                        onClick={handleSendTestEmail}
+                        disabled={sendingTest || !testEmail}
+                        className="w-full bg-neutral-900 text-white py-3 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-black transition-all disabled:opacity-50"
+                    >
+                        {sendingTest ? 'Dispatching...' : 'Fire Test Email'}
+                    </button>
+                </div>
+           </div>
         </section>
       </div>
     </div>
@@ -300,6 +370,8 @@ function TemplateManagement({ countryCode }: { countryCode: string }) {
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [testRecipient, setTestRecipient] = useState('');
+  const [testingCategory, setTestingCategory] = useState<string | null>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -317,6 +389,19 @@ function TemplateManagement({ countryCode }: { countryCode: string }) {
     }
   };
 
+  const handleCategoryTest = async (category: string) => {
+    if (!testRecipient) return alert('Enter test recipient email');
+    setTestingCategory(category);
+    try {
+        await api.post(`/api/v1/email-centre/config/send-category-test?countryCode=${countryCode}`, { recipient: testRecipient, category });
+        alert(`Bulk test signals dispatched for ${category}`);
+    } catch (e) {
+        alert('Bulk dispatch failed');
+    } finally {
+        setTestingCategory(null);
+    }
+  };
+
   const filteredTemplates = templates.filter(t =>
     t.templateCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -326,19 +411,45 @@ function TemplateManagement({ countryCode }: { countryCode: string }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-[24px] border border-neutral-200 shadow-sm">
-         <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-               type="text"
-               value={searchQuery}
-               onChange={e => setSearchQuery(e.target.value)}
-               placeholder="Search templates or categories..."
-               className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-12 pr-6 py-2.5 text-[10px] font-bold uppercase outline-none focus:border-neutral-900 transition-all"
-            />
+         <div className="flex items-center gap-6 flex-1">
+            <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search templates or categories..."
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-12 pr-6 py-2.5 text-[10px] font-bold uppercase outline-none focus:border-neutral-900 transition-all"
+                />
+            </div>
+
+            <div className="h-10 w-px bg-neutral-100" />
+
+            <div className="flex items-center gap-4">
+                <input
+                    type="email"
+                    value={testRecipient}
+                    onChange={e => setTestRecipient(e.target.value)}
+                    placeholder="Recipient for Bulk Test"
+                    className="bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2 text-[10px] font-bold outline-none w-48"
+                />
+                <div className="flex gap-1">
+                    {['CUSTOMER', 'PROVIDER', 'WALLET', 'REFERRAL'].map(cat => (
+                        <button
+                            key={cat}
+                            disabled={!!testingCategory || !testRecipient}
+                            onClick={() => handleCategoryTest(cat)}
+                            className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-[8px] font-black uppercase hover:bg-black transition-all disabled:opacity-50"
+                        >
+                            {testingCategory === cat ? 'Firing...' : `Test ${cat}`}
+                        </button>
+                    ))}
+                </div>
+            </div>
          </div>
          <button
             onClick={() => { setEditingTemplate(null); setShowModal(true); }}
-            className="bg-neutral-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all shadow-lg shadow-neutral-200"
+            className="bg-brand-customer-red text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-700 transition-all shadow-lg shadow-red-100"
          >
             <Plus size={14} /> New Template
          </button>
@@ -350,15 +461,16 @@ function TemplateManagement({ countryCode }: { countryCode: string }) {
             <div key={i} className="h-48 bg-white border border-neutral-200 rounded-[32px] animate-pulse" />
           ))
         ) : filteredTemplates.map((template) => (
-          <div key={template._id} className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-all group flex flex-col h-full">
+          <div key={template._id} className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-all group flex flex-col h-full text-neutral-900">
             <div className="p-8 space-y-4 flex-1">
               <div className="flex justify-between items-start">
                  <div className="space-y-1">
                     <span className="px-2 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[7px] font-black uppercase tracking-widest">{template.category}</span>
-                    <h3 className="text-xs font-black uppercase tracking-tight text-neutral-900">{template.templateCode}</h3>
+                    <h3 className="text-xs font-black uppercase tracking-tight">{template.templateCode}</h3>
                  </div>
                  <div className="flex gap-1">
                     <button onClick={() => { setEditingTemplate(template); setShowModal(true); }} className="p-2 bg-neutral-50 rounded-lg text-neutral-400 hover:text-neutral-900 transition-all"><Edit size={12} /></button>
+                    <button onClick={() => alert('Clone functionality coming in V3.2')} className="p-2 bg-neutral-50 rounded-lg text-neutral-400 hover:text-neutral-900 transition-all"><RefreshCw size={12} /></button>
                  </div>
               </div>
 
@@ -378,8 +490,14 @@ function TemplateManagement({ countryCode }: { countryCode: string }) {
               </div>
             </div>
             <div className="px-8 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-between items-center">
-               <span className={`text-[8px] font-black uppercase ${template.active ? 'text-green-600' : 'text-neutral-400'}`}>{template.active ? 'Operational' : 'Inactive'}</span>
-               <span className="text-[8px] font-bold text-neutral-400 uppercase">Version {template.version}</span>
+               <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => api.patch(`/api/v1/email-centre/templates/${template._id}`, { active: !template.active }).then(loadTemplates)}
+                        className={`w-3 h-3 rounded-full ${template.active ? 'bg-green-500 shadow-lg shadow-green-200' : 'bg-neutral-300'}`}
+                    />
+                    <span className={`text-[8px] font-black uppercase ${template.active ? 'text-green-600' : 'text-neutral-400'}`}>{template.active ? 'Operational' : 'Deactivated'}</span>
+               </div>
+               <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Node: {template.countryCode}</span>
             </div>
           </div>
         ))}
@@ -412,6 +530,9 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [testRecipient, setTestRecipient] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
 
   const handleSave = async () => {
     if (!form.templateCode || !form.body) return alert('Code and Body required');
@@ -446,9 +567,31 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
      }
   };
 
+  const handleSendTest = async () => {
+    if (!testRecipient) return alert('Enter test recipient');
+    setSendingTest(true);
+    try {
+        const mockData: Record<string, string> = {};
+        form.placeholders.forEach((p: string) => {
+            mockData[p] = `[TEST_${p}]`;
+        });
+
+        await api.post(`/api/v1/email-centre/templates/${template?._id || 'new'}/send-test?countryCode=${countryCode}`, {
+            recipient: testRecipient,
+            templateCode: form.templateCode,
+            mockData
+        });
+        alert('Template test signal dispatched');
+    } catch (e) {
+        alert('Test dispatch failed');
+    } finally {
+        setSendingTest(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 text-neutral-900">
-      <div className="bg-white rounded-[40px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col h-[90vh] border border-neutral-200">
+      <div className="bg-white rounded-[40px] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col h-[90vh] border border-neutral-200">
         <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight">{template ? 'Modify' : 'Initialize'} Oracle Template</h3>
@@ -458,9 +601,9 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
         </div>
 
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-1/2 p-10 space-y-6 overflow-y-auto border-r border-neutral-100 custom-scrollbar">
-            <div className="grid grid-cols-2 gap-6">
-               <div className="space-y-2 col-span-2">
+          <div className="w-1/3 p-10 space-y-6 overflow-y-auto border-r border-neutral-100 custom-scrollbar">
+            <div className="grid grid-cols-1 gap-6">
+               <div className="space-y-2">
                  <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Unique Template Code</label>
                  <input
                    type="text"
@@ -471,30 +614,32 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all disabled:opacity-50"
                  />
                </div>
-               <div className="space-y-2">
-                 <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Category</label>
-                 <select
-                   value={form.category}
-                   onChange={e => setForm({...form, category: e.target.value})}
-                   className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all"
-                 >
-                   {['ACCOUNT', 'CUSTOMER', 'PROVIDER', 'WALLET', 'REFERRAL', 'AFFILIATE', 'MARKETING', 'LEGAL', 'ADMIN'].map(cat => (
-                     <option key={cat} value={cat}>{cat}</option>
-                   ))}
-                 </select>
+               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Category</label>
+                    <select
+                    value={form.category}
+                    onChange={e => setForm({...form, category: e.target.value})}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all"
+                    >
+                    {['ACCOUNT', 'CUSTOMER', 'PROVIDER', 'WALLET', 'REFERRAL', 'AFFILIATE', 'MARKETING', 'LEGAL', 'ADMIN'].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Language</label>
+                    <select
+                    value={form.language}
+                    onChange={e => setForm({...form, language: e.target.value})}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all"
+                    >
+                    <option value="EN">English (Global)</option>
+                    <option value="ZA">isiZulu (Regional)</option>
+                    </select>
+                </div>
                </div>
                <div className="space-y-2">
-                 <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Language</label>
-                 <select
-                   value={form.language}
-                   onChange={e => setForm({...form, language: e.target.value})}
-                   className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all"
-                 >
-                   <option value="EN">English (Global)</option>
-                   <option value="ZA">isiZulu (Regional)</option>
-                 </select>
-               </div>
-               <div className="space-y-2 col-span-2">
                  <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Subject Line</label>
                  <input
                    type="text"
@@ -503,7 +648,7 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all"
                  />
                </div>
-               <div className="space-y-2 col-span-2">
+               <div className="space-y-2">
                  <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Allowed Placeholders (Comma Separated)</label>
                  <input
                    type="text"
@@ -512,60 +657,78 @@ function TemplateModal({ template, countryCode, onClose, onSave }: any) {
                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-[10px] font-bold outline-none focus:border-neutral-900 transition-all"
                  />
                </div>
-               <div className="space-y-2 col-span-2 pt-2">
+               <div className="space-y-2 pt-2">
                  <div className="flex items-center justify-between ml-1">
                     <label className="text-[9px] font-black uppercase text-neutral-400">Template HTML / Text Body</label>
-                    <button onClick={handlePreview} className="text-[9px] font-black uppercase text-brand-customer-red hover:underline flex items-center gap-1"><Eye size={12} /> Live Preview</button>
                  </div>
                  <textarea
                    value={form.body}
                    onChange={e => setForm({...form, body: e.target.value})}
-                   rows={10}
+                   rows={12}
                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-4 text-xs font-medium outline-none focus:border-neutral-900 transition-all resize-none font-mono"
                  />
                </div>
             </div>
           </div>
-          <div className="w-1/2 bg-neutral-50 overflow-y-auto p-10 custom-scrollbar relative">
-             {!showPreview ? (
-               <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="p-6 bg-white rounded-[32px] border border-neutral-200 text-neutral-300 shadow-sm"><FileText size={48} /></div>
-                  <div>
-                     <p className="text-[10px] font-black uppercase text-neutral-400">Preview Engine Offline</p>
-                     <p className="text-[9px] text-neutral-300 font-bold uppercase mt-1">Modifications pending dispatch to Oracle...</p>
-                  </div>
-               </div>
-             ) : (
-               <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
-                     <p className="text-[10px] font-black uppercase text-neutral-400">Oracle Simulation Output</p>
-                     <button onClick={() => setShowPreview(false)} className="text-[9px] font-black uppercase text-neutral-400 hover:text-neutral-900 transition-all">Reset Engine</button>
-                  </div>
-                  <div className="bg-white rounded-3xl p-8 shadow-xl border border-neutral-200 min-h-[400px]">
-                     <div className="mb-8 pb-4 border-b border-neutral-100">
-                        <p className="text-[8px] font-black uppercase text-neutral-300">Subject Target</p>
-                        <p className="text-xs font-black uppercase text-neutral-900 mt-1">{form.subject || 'NO SUBJECT DEFINED'}</p>
-                     </div>
-                     <div className="prose prose-sm max-w-none text-neutral-700" dangerouslySetInnerHTML={{ __html: preview || '' }} />
-                  </div>
-                  <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-2xl flex gap-3">
-                     <AlertCircle size={16} className="text-yellow-600 shrink-0" />
-                     <p className="text-[9px] text-yellow-700 font-bold leading-relaxed">This simulation displays the body content only. Global headers, workspace logos, and footers will be injected dynamically at dispatch time based on the active Sender Configuration.</p>
-                  </div>
-               </div>
-             )}
+          <div className="w-2/3 bg-neutral-50 overflow-y-auto p-10 custom-scrollbar relative">
+             <div className="flex items-center justify-between border-b border-neutral-200 pb-4 mb-6">
+                <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Live Simulation Engine</p>
+                <div className="flex gap-2">
+                    <button onClick={() => setPreviewMode('desktop')} className={`p-2 rounded-lg transition-all ${previewMode === 'desktop' ? 'bg-neutral-900 text-white' : 'text-neutral-400'}`}><ChevronUp size={16} /></button>
+                    <button onClick={() => setPreviewMode('mobile')} className={`p-2 rounded-lg transition-all ${previewMode === 'mobile' ? 'bg-neutral-900 text-white' : 'text-neutral-400'}`}><ChevronDown size={16} /></button>
+                    <button onClick={handlePreview} className="bg-brand-customer-red text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ml-4">Refresh Preview</button>
+                </div>
+             </div>
+
+             <div className="flex justify-center">
+                <div className={`transition-all duration-300 bg-white shadow-2xl border border-neutral-200 rounded-[24px] overflow-hidden ${previewMode === 'mobile' ? 'w-[375px] h-[667px]' : 'w-full min-h-[500px]'}`}>
+                   {!showPreview ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center space-y-4 p-20">
+                         <div className="p-6 bg-neutral-50 rounded-[32px] border border-neutral-100 text-neutral-300 shadow-inner"><FileText size={48} /></div>
+                         <p className="text-[10px] font-black uppercase text-neutral-400">Preview Hub Offline</p>
+                      </div>
+                   ) : (
+                      <div className="h-full flex flex-col">
+                         <div className="p-6 border-b border-neutral-50">
+                            <p className="text-[8px] font-black uppercase text-neutral-300 mb-1">Subject Target</p>
+                            <p className="text-[10px] font-black uppercase text-neutral-900">{form.subject || 'NO SUBJECT DEFINED'}</p>
+                         </div>
+                         <div className="flex-1 overflow-y-auto p-8 prose prose-sm max-w-none text-neutral-700" dangerouslySetInnerHTML={{ __html: preview || '' }} />
+                      </div>
+                   )}
+                </div>
+             </div>
           </div>
         </div>
 
-        <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
-          <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all active:scale-95 shadow-sm">Abort</button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all disabled:opacity-50 active:scale-95 shadow-xl"
-          >
-            {saving ? 'Synchronizing Data Nodes...' : 'Commit Template Protocol'}
-          </button>
+        <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex items-center justify-between gap-8">
+          <div className="flex items-center gap-4 flex-1 max-w-md">
+             <input
+                type="email"
+                value={testRecipient}
+                onChange={e => setTestRecipient(e.target.value)}
+                placeholder="Send test to..."
+                className="flex-1 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-[10px] font-bold outline-none focus:border-neutral-900 transition-all"
+             />
+             <button
+                onClick={handleSendTest}
+                disabled={sendingTest || !testRecipient || !template}
+                className="bg-neutral-900 text-white h-12 px-6 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-black transition-all disabled:opacity-50"
+             >
+                {sendingTest ? 'Sending...' : 'Dispatch Test'}
+             </button>
+          </div>
+
+          <div className="flex gap-4">
+             <button onClick={onClose} className="bg-white border border-neutral-200 text-neutral-500 h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all active:scale-95 shadow-sm">Abort</button>
+             <button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-brand-customer-red text-white h-14 px-12 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-700 transition-all disabled:opacity-50 active:scale-95 shadow-xl shadow-red-100"
+             >
+                {saving ? 'Synchronizing Nodes...' : 'Commit Template Protocol'}
+             </button>
+          </div>
         </div>
       </div>
     </div>
@@ -577,15 +740,16 @@ function EmailQueueMonitor({ countryCode }: { countryCode: string }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeCategory, setActiveCategory] = useState<string>('ALL');
 
   useEffect(() => {
     loadLogs();
-  }, [countryCode, page]);
+  }, [countryCode, page, activeCategory]);
 
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/api/v1/email-centre/logs?countryCode=${countryCode}&page=${page}`);
+      const res = await api.get(`/api/v1/email-centre/logs?countryCode=${countryCode}&page=${page}&category=${activeCategory}`);
       setLogs(res.data.data);
       setTotalPages(res.data.pages);
     } catch (e) {
@@ -608,11 +772,27 @@ function EmailQueueMonitor({ countryCode }: { countryCode: string }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-[24px] border border-neutral-200 shadow-sm">
-         <div className="flex items-center gap-4">
-            <div className="p-3 bg-neutral-900 text-white rounded-xl"><History size={20} /></div>
-            <div>
-               <p className="text-xs font-black uppercase tracking-tight">Active Queue History</p>
-               <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Real-time status of all workspace dispatch nodes</p>
+         <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
+                <div className="p-3 bg-neutral-900 text-white rounded-xl"><History size={20} /></div>
+                <div>
+                   <p className="text-xs font-black uppercase tracking-tight">Active Queue History</p>
+                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Real-time status of all workspace dispatch nodes</p>
+                </div>
+            </div>
+
+            <div className="h-10 w-px bg-neutral-100" />
+
+            <div className="flex gap-2">
+                {['ALL', 'ACCOUNT', 'CUSTOMER', 'PROVIDER', 'WALLET', 'REFERRAL', 'AFFILIATE', 'ADMIN'].map(cat => (
+                    <button
+                        key={cat}
+                        onClick={() => { setActiveCategory(cat); setPage(1); }}
+                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${activeCategory === cat ? 'bg-neutral-900 text-white' : 'bg-neutral-50 text-neutral-400 hover:text-neutral-600'}`}
+                    >
+                        {cat}
+                    </button>
+                ))}
             </div>
          </div>
          <button onClick={() => loadLogs()} className="p-3 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 transition-all"><RefreshCw size={16} /></button>
@@ -622,11 +802,11 @@ function EmailQueueMonitor({ countryCode }: { countryCode: string }) {
         <table className="w-full text-left border-collapse">
           <thead className="bg-neutral-50/50 border-b border-neutral-100">
             <tr>
-              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Recipient</th>
-              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Template / Code</th>
-              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Status Node</th>
-              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Dispatch Time</th>
-              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest text-right">Control</th>
+              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Recipient / Target</th>
+              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Oracle Node / Code</th>
+              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Status / Telemetry</th>
+              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest">Dispatch Window</th>
+              <th className="px-8 py-5 text-[9px] font-black uppercase text-neutral-400 tracking-widest text-right">Emergency Control</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-50">
@@ -635,12 +815,13 @@ function EmailQueueMonitor({ countryCode }: { countryCode: string }) {
                   <tr key={i} className="animate-pulse"><td colSpan={5} className="h-16 bg-white" /></tr>
                ))
             ) : logs.length === 0 ? (
-               <tr><td colSpan={5} className="px-8 py-20 text-center font-black uppercase text-neutral-300 text-[10px]">Queue cache is currently empty for this workspace</td></tr>
+               <tr><td colSpan={5} className="px-8 py-20 text-center font-black uppercase text-neutral-300 text-[10px]">Queue cache is currently empty for this configuration</td></tr>
             ) : logs.map((log) => (
               <tr key={log._id} className="hover:bg-neutral-50/50 transition-colors group">
                 <td className="px-8 py-6">
                    <div className="flex flex-col">
                       <span className="text-[10px] font-black text-neutral-900">{log.recipient}</span>
+                      <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">ID: {log._id.slice(-8)}</span>
                    </div>
                 </td>
                 <td className="px-8 py-6">
@@ -650,24 +831,40 @@ function EmailQueueMonitor({ countryCode }: { countryCode: string }) {
                    </div>
                 </td>
                 <td className="px-8 py-6">
-                   <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
-                      log.status === 'SENT' ? 'bg-green-100 text-green-700' :
-                      log.status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                      'bg-neutral-100 text-neutral-500'
-                   }`}>
-                      {log.status}
-                   </span>
+                   <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                        log.status === 'SENT' ? 'bg-green-100 text-green-700' :
+                        log.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                        'bg-neutral-100 text-neutral-500'
+                        }`}>
+                        {log.status}
+                        </span>
+                        {log.status === 'FAILED' && log.errorMessage && (
+                            <div className="group/err relative">
+                                <AlertCircle size={14} className="text-red-400" />
+                                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover/err:block w-48 p-2 bg-neutral-900 text-white text-[8px] rounded-lg z-50">
+                                    {log.errorMessage}
+                                </div>
+                            </div>
+                        )}
+                   </div>
                 </td>
-                <td className="px-8 py-6 text-[10px] font-bold text-neutral-400">
-                   {new Date(log.createdAt).toLocaleString()}
+                <td className="px-8 py-6">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-neutral-600">{new Date(log.createdAt).toLocaleString()}</span>
+                        {log.sentAt && <span className="text-[8px] text-neutral-400 font-bold uppercase mt-0.5">Resolved in {Math.round((new Date(log.sentAt).getTime() - new Date(log.createdAt).getTime()) / 1000)}s</span>}
+                    </div>
                 </td>
                 <td className="px-8 py-6 text-right">
-                   <button
-                      onClick={() => handleResend(log._id)}
-                      className="p-2 bg-neutral-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 hover:bg-black transition-all shadow-lg"
-                   >
-                      Force Resend
-                   </button>
+                   <div className="flex justify-end gap-2">
+                        {log.metadata?.pdfUrl && <button className="p-2 bg-neutral-50 text-neutral-400 rounded-lg hover:text-neutral-900"><FileText size={12} /></button>}
+                        <button
+                            onClick={() => handleResend(log._id)}
+                            className="p-2 bg-neutral-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 hover:bg-black transition-all shadow-lg"
+                        >
+                            Resend Signal
+                        </button>
+                   </div>
                 </td>
               </tr>
             ))}
