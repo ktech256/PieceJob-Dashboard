@@ -13,7 +13,6 @@ import {
   MapPin,
   ExternalLink
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function PerformanceAppeals() {
   const { countryCode } = useCountryStore();
@@ -44,11 +43,10 @@ export default function PerformanceAppeals() {
             adminNotes: "Processed via Appeal Dashboard",
             adjustmentAction: action
         });
-        toast.success(`Appeal ${status.toLowerCase()} successfully`);
         loadAppeals();
         setSelectedAppeal(null);
     } catch (e) {
-        toast.error('Review submission failed');
+        console.error('Review submission failed');
     }
   };
 

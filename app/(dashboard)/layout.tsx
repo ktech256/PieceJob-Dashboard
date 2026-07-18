@@ -32,8 +32,7 @@ import {
   Megaphone,
   Gift,
   Mail,
-  Trophy,
-  ShieldAlert
+  Trophy
 } from "lucide-react";
 
 export default function DashboardLayout({
