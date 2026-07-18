@@ -31,7 +31,9 @@ import {
   RotateCcw,
   Megaphone,
   Gift,
-  Mail
+  Mail,
+  Trophy,
+  ShieldAlert
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -77,6 +79,9 @@ export default function DashboardLayout({
     { name: "Referrals", href: "/marketing?tab=referrals", icon: <Gift size={18} /> },
     { name: "Finance", href: "/finance", icon: <Wallet size={18} /> },
     { name: "Workspace Settings", href: "/settings", icon: <Settings size={18} /> },
+    { name: "Performance Appeals", href: "/performance/appeals", icon: <ShieldAlert size={18} /> },
+    { name: "Elite Rankings", href: "/performance/rankings", icon: <Trophy size={18} /> },
+    { name: "Score Audit", href: "/performance/adjustments", icon: <History size={18} /> },
     { name: "Service Catalog", href: "/services", icon: <ClipboardList size={18} /> },
     { name: "Providers", href: "/providers", icon: <UserRound size={18} /> },
     { name: "Users", href: "/users", icon: <UserRound size={18} /> },
