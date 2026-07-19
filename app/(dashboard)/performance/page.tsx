@@ -69,9 +69,9 @@ export default function ProviderPerformance() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard label="Elite Fleet" value={providers.filter(p => p.tier === 'ELITE').length} icon={<Award className="text-yellow-600" />} />
-          <StatCard label="Avg. Acceptance" value="84%" icon={<TrendingUp className="text-green-600" />} />
+          <StatCard label="Avg. Health Score" value={`${(providers.reduce((acc, p) => acc + (p.performance?.healthScore || 100), 0) / (providers.length || 1)).toFixed(0)}%`} icon={<ShieldCheck className="text-blue-600" />} />
           <StatCard label="Active Online" value={providers.filter(p => p.isOnline).length} icon={<Activity className="text-brand-provider-green" />} />
-          <StatCard label="At Risk" value={providers.filter(p => p.performance?.acceptanceRate < 40).length} icon={<AlertTriangle className="text-red-600" />} />
+          <StatCard label="At Risk" value={providers.filter(p => (p.performance?.healthScore || 100) < 60).length} icon={<AlertTriangle className="text-red-600" />} />
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-[32px] overflow-hidden shadow-sm">
@@ -80,10 +80,10 @@ export default function ProviderPerformance() {
                   <tr>
                       <th className="px-8 py-5">Provider</th>
                       <th className="px-8 py-5">Tier</th>
-                      <th className="px-8 py-5">Acceptance</th>
-                      <th className="px-8 py-5">Completion</th>
-                      <th className="px-8 py-5">Lifecycle</th>
-                      <th className="px-8 py-5">Heartbeat</th>
+                      <th className="px-8 py-5">Health</th>
+                      <th className="px-8 py-5">Reliability</th>
+                      <th className="px-8 py-5">Cancellation</th>
+                      <th className="px-8 py-5">Status</th>
                       <th className="px-8 py-5 text-right">Actions</th>
                   </tr>
               </thead>
@@ -110,26 +110,21 @@ export default function ProviderPerformance() {
                               }`}>{p.tier}</span>
                           </td>
                           <td className="px-8 py-5">
-                              <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 w-16 bg-neutral-100 rounded-full overflow-hidden">
-                                      <div className={`h-full ${p.performance?.acceptanceRate > 70 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${p.performance?.acceptanceRate || 0}%` }}></div>
-                                  </div>
-                                  <span className="text-xs">{(p.performance?.acceptanceRate || 0).toFixed(0)}%</span>
-                              </div>
+                             <div className="flex items-center gap-2">
+                                <span className={`text-xs font-black ${
+                                    (p.performance?.healthScore || 100) >= 90 ? 'text-green-600' :
+                                    (p.performance?.healthScore || 100) >= 70 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>{(p.performance?.healthScore || 100).toFixed(0)}%</span>
+                             </div>
                           </td>
-                          <td className="px-8 py-5 text-xs text-neutral-500">{(p.performance?.completionRate || 0).toFixed(0)}%</td>
+                          <td className="px-8 py-5 text-xs text-neutral-500">{(p.performance?.reliabilityScore || 100).toFixed(0)}%</td>
+                          <td className="px-8 py-5 text-xs text-neutral-500">{(p.performance?.cancellationScore || 100).toFixed(0)}%</td>
                           <td className="px-8 py-5">
                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
                                   p.lifecycleState === 'SUSPENDED' ? 'bg-red-50 text-red-600' :
                                   p.lifecycleState === 'ACTIVE' ? 'bg-green-50 text-green-600' :
                                   'bg-blue-50 text-blue-600'
                               }`}>{p.lifecycleState}</span>
-                          </td>
-                          <td className="px-8 py-5">
-                              <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${p.isOnline ? 'bg-brand-provider-green animate-pulse shadow-[0_0_8px_#00FF00]' : 'bg-neutral-300'}`}></div>
-                                  <span className="text-[10px] text-neutral-400 uppercase">{p.lastHeartbeat ? new Date(p.lastHeartbeat).toLocaleTimeString() : 'N/A'}</span>
-                              </div>
                           </td>
                           <td className="px-8 py-5 text-right">
                               <button className="p-2 bg-neutral-100 rounded-lg hover:bg-neutral-900 hover:text-white transition-all">
