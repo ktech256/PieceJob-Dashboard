@@ -68,8 +68,14 @@ export default function PerformanceRankings() {
                       <div>
                           <p className="text-[9px] font-black uppercase opacity-60 mb-1">Rating</p>
                           <div className="flex items-center gap-1">
-                              <Star size={12} className="fill-yellow-500 text-yellow-500" />
-                              <p className="text-lg font-black">{p.rating.toFixed(1)}</p>
+                              {p.isProbation ? (
+                                  <span className="text-xs font-black uppercase bg-blue-500 text-white px-2 py-0.5 rounded">New</span>
+                              ) : (
+                                  <>
+                                      <Star size={12} className="fill-yellow-500 text-yellow-500" />
+                                      <p className="text-lg font-black">{p.rating?.toFixed(1)}</p>
+                                  </>
+                              )}
                           </div>
                       </div>
                   </div>
@@ -111,8 +117,14 @@ export default function PerformanceRankings() {
                    </div>
                 </td>
                 <td className="px-8 py-5 flex items-center gap-1">
-                   <Star size={12} className="fill-yellow-500 text-yellow-500" />
-                   {p.rating.toFixed(1)}
+                   {p.isProbation ? (
+                       <span className="text-[9px] font-black uppercase text-blue-600">New Provider</span>
+                   ) : (
+                       <>
+                           <Star size={12} className="fill-yellow-500 text-yellow-500" />
+                           {p.rating?.toFixed(1)}
+                       </>
+                   )}
                 </td>
                 <td className="px-8 py-5 text-neutral-500">{p.jobs}</td>
                 <td className="px-8 py-5">

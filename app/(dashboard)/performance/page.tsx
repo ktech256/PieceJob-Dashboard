@@ -80,9 +80,9 @@ export default function ProviderPerformance() {
                   <tr>
                       <th className="px-8 py-5">Provider</th>
                       <th className="px-8 py-5">Tier</th>
+                      <th className="px-8 py-5">Rating</th>
                       <th className="px-8 py-5">Health</th>
                       <th className="px-8 py-5">Reliability</th>
-                      <th className="px-8 py-5">Cancellation</th>
                       <th className="px-8 py-5">Status</th>
                       <th className="px-8 py-5 text-right">Actions</th>
                   </tr>
@@ -93,8 +93,8 @@ export default function ProviderPerformance() {
                   ) : filtered.map(p => (
                       <tr key={p._id} className="hover:bg-neutral-50/50 transition-all group">
                           <td className="px-8 py-5 flex items-center gap-4">
-                              <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400">
-                                  <User size={20} />
+                              <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400 overflow-hidden">
+                                  {p.userId?.profilePhoto ? <img src={p.userId.profilePhoto} alt="" className="w-full h-full object-cover" /> : <User size={20} />}
                               </div>
                               <div>
                                   <p className="text-neutral-900">{p.userId?.firstName} {p.userId?.lastName}</p>
@@ -110,6 +110,20 @@ export default function ProviderPerformance() {
                               }`}>{p.tier}</span>
                           </td>
                           <td className="px-8 py-5">
+                             <div>
+                                <div className="flex items-center gap-1">
+                                    {(p.ratingCount || 0) < 5 ? (
+                                        <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">New ({p.ratingCount || 0}/5)</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-neutral-900">{p.ratingAvg?.toFixed(1)}</span>
+                                            <span className="text-[10px] text-neutral-400 font-medium">({p.ratingCount})</span>
+                                        </>
+                                    )}
+                                </div>
+                             </div>
+                          </td>
+                          <td className="px-8 py-5">
                              <div className="flex items-center gap-2">
                                 <span className={`text-xs font-black ${
                                     (p.performance?.healthScore || 100) >= 90 ? 'text-green-600' :
@@ -118,7 +132,6 @@ export default function ProviderPerformance() {
                              </div>
                           </td>
                           <td className="px-8 py-5 text-xs text-neutral-500">{(p.performance?.reliabilityScore || 100).toFixed(0)}%</td>
-                          <td className="px-8 py-5 text-xs text-neutral-500">{(p.performance?.cancellationScore || 100).toFixed(0)}%</td>
                           <td className="px-8 py-5">
                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
                                   p.lifecycleState === 'SUSPENDED' ? 'bg-red-50 text-red-600' :
