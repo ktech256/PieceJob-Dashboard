@@ -234,14 +234,14 @@ export default function PartnerAnalyticsDetail({ partnerId, onClose }: { partner
                                                     </td>
                                                     <td className="px-10 py-6">
                                                         <div className="space-y-1">
-                                                            <p className="text-neutral-900">{r.revenue.toFixed(2)} R Generated</p>
-                                                            <p className="text-[8px] text-neutral-400 uppercase tracking-tight italic">Platform value</p>
+                                                            <p className="text-green-600 font-black">{r.commission.toFixed(2)} R Paid</p>
+                                                            <p className="text-[8px] text-neutral-400">{Math.max(0, (r.maxRewards || 5) - r.rewardedJobs)} Rewards Remaining</p>
                                                         </div>
                                                     </td>
                                                     <td className="px-10 py-6">
                                                         <div className="space-y-1">
-                                                            <p className="text-green-600 font-black">{r.commission.toFixed(2)} R Paid</p>
-                                                            <p className="text-[8px] text-neutral-400">{Math.max(0, (r.maxRewards || 5) - r.rewardedJobs)} Rewards Remaining</p>
+                                                            <p className="text-blue-600 font-black">{r.revenue.toFixed(2)} R</p>
+                                                            <p className="text-[8px] text-neutral-400 uppercase">Platform Revenue</p>
                                                         </div>
                                                     </td>
                                                     <td className="px-10 py-6 text-right">
