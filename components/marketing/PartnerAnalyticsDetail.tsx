@@ -132,32 +132,44 @@ export default function PartnerAnalyticsDetail({ partnerId, onClose }: { partner
                                     <thead>
                                         <tr className="text-[9px] font-black uppercase text-neutral-400 bg-neutral-50/50">
                                             <th className="px-8 py-5">User Signature</th>
-                                            <th className="px-8 py-5">Role</th>
-                                            <th className="px-8 py-5">Status</th>
-                                            <th className="px-8 py-5 text-right">Registered</th>
+                                            <th className="px-8 py-5">Activity Metrics</th>
+                                            <th className="px-8 py-5">Commission Yield</th>
+                                            <th className="px-8 py-5 text-right">Referral age</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-[10px] font-bold uppercase">
-                                        {recentReferrals.map((r: any) => (
-                                            <tr key={r._id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/30 transition-colors">
-                                                <td className="px-8 py-5 flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-neutral-900 text-white rounded-lg flex items-center justify-center font-black">
-                                                        {r.referredId.firstName.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-neutral-900">{r.referredId.firstName} {r.referredId.lastName}</p>
-                                                        <p className="text-[8px] text-neutral-400 lowercase">{r.referredId.email}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 text-neutral-500">{r.referredId.role}</td>
-                                                <td className="px-8 py-5">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black ${r.jobsCompletedCount > 0 ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                                                        {r.jobsCompletedCount > 0 ? 'Qualified' : 'Registered'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5 text-right text-neutral-400">{new Date(r.createdAt).toLocaleDateString()}</td>
-                                            </tr>
-                                        ))}
+                                        {recentReferrals.map((r: any) => {
+                                            const ageDays = Math.floor((Date.now() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                                            return (
+                                                <tr key={r._id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/30 transition-colors">
+                                                    <td className="px-8 py-5 flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-neutral-900 text-white rounded-lg flex items-center justify-center font-black">
+                                                            {r.referredId.firstName.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-neutral-900">{r.referredId.firstName} {r.referredId.lastName}</p>
+                                                            <p className="text-[8px] text-neutral-400 lowercase">{r.referredId.role} • {r.referredId.email}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="space-y-1">
+                                                            <p className="text-neutral-900">{r.jobsCompletedCount} Jobs Completed</p>
+                                                            <p className="text-[8px] text-neutral-400">Total Spend: {r.totalSpend?.toFixed(2) || 0} R</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="space-y-1">
+                                                            <p className="text-green-600">{r.totalCommissionGenerated?.toFixed(2) || 0} R</p>
+                                                            <p className="text-[8px] text-neutral-400">{r.rewardsIssuedCount} Rewards • {Math.max(0, 5 - r.rewardsIssuedCount)} Remaining</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <p className="text-neutral-900">{ageDays} Days</p>
+                                                        <p className="text-[8px] text-neutral-400 uppercase">Registered {new Date(r.createdAt).toLocaleDateString()}</p>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

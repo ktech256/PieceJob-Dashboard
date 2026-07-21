@@ -247,10 +247,14 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
 
         setSaving(true);
         try {
-            await api.post('/api/v1/affiliate/admin', form);
+            if (partner?._id) {
+                await api.patch(`/api/v1/affiliate/admin/${partner._id}`, form);
+            } else {
+                await api.post('/api/v1/affiliate/admin', form);
+            }
             onSave();
         } catch (e: any) {
-            const errorMsg = e.response?.data?.message || 'Failed to onboard partner. Please verify if email/phone is already in use.';
+            const errorMsg = e.response?.data?.message || 'Failed to save partner. Please verify if email/phone is already in use.';
             alert(errorMsg);
         } finally {
             setSaving(false);

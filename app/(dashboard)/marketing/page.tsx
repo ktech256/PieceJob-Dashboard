@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import AffiliatePartnerList from '@/components/marketing/AffiliatePartnerList';
+import AffiliateSettingsTab from '@/components/marketing/AffiliateSettingsTab';
 import EmailCentreHub from './email-centre/EmailCentreHub';
 
 export default function MarketingPage() {
@@ -133,6 +134,12 @@ function MarketingContent() {
             className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'notifications' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
           >
             Global Push
+          </button>
+          <button
+            onClick={() => setActiveTab('affiliate-settings')}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'affiliate-settings' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
+          >
+            Affiliate Settings
           </button>
           <button
             onClick={() => setActiveTab('email')}
@@ -265,6 +272,10 @@ function MarketingContent() {
 
       {activeTab === 'affiliates' && (
         <AffiliatePartnerList countryCode={countryCode} />
+      )}
+
+      {activeTab === 'affiliate-settings' && (
+        <AffiliateSettingsTab countryCode={countryCode} />
       )}
 
       {activeTab === 'notifications' && (
