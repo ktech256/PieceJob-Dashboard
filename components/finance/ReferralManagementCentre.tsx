@@ -134,6 +134,7 @@ export default function ReferralManagementCentre({ countryCode, currencySymbol }
             <div className="flex gap-4 border-b border-neutral-100 pb-4 overflow-x-auto no-scrollbar">
                 {[
                     { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
+                    { id: 'settlements', label: 'Partner Settlements', icon: <ChevronRight size={14} /> },
                     { id: 'rewards', label: 'Reward Oracle', icon: <Gift size={14} /> },
                     { id: 'settings', label: 'Program Control', icon: <Settings2 size={14} /> },
                     { id: 'fraud', label: 'Fraud Matrix', icon: <ShieldAlert size={14} /> },
@@ -217,6 +218,10 @@ export default function ReferralManagementCentre({ countryCode, currencySymbol }
                         </div>
                     </div>
                 </div>
+            )}
+
+            {activeTab === 'settlements' && (
+                <PartnerSettlementManager currencySymbol={currencySymbol} countryCode={countryCode} />
             )}
 
             {activeTab === 'settings' && settings && (
@@ -827,6 +832,215 @@ function ReferralTestCentre({ countryCode, currencySymbol }: any) {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function PartnerSettlementManager({ currencySymbol, countryCode }: any) {
+    const [settlements, setSettlements] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selected, setSelected] = useState<any>(null);
+
+    const loadSettlements = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/api/v1/affiliate/admin/settlements?countryCode=${countryCode}`);
+            setSettlements(res.data.data);
+        } catch (e) {
+            console.error("Failed to load settlements");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSettlements();
+    }, [countryCode]);
+
+    const handleUpdateStatus = async (id: string, status: string) => {
+        const note = prompt("Enter internal note for this action:");
+        let paymentReference = "";
+        if (status === 'PAID') {
+            paymentReference = prompt("Enter Payment Reference Number:") || "";
+            if (!paymentReference) return alert("Payment reference required to mark as PAID.");
+        }
+
+        try {
+            await api.patch(`/api/v1/affiliate/admin/settlements/${id}/status`, { status, note, paymentReference });
+            alert(`Settlement marked as ${status}`);
+            loadSettlements();
+            setSelected(null);
+        } catch (e) {
+            alert("Update failed");
+        }
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="bg-white border border-neutral-200 rounded-[40px] overflow-hidden shadow-sm">
+                <div className="p-10 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-neutral-900">Affiliate Settlement Queue</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">Authorized Disbursement Management</p>
+                    </div>
+                    <button onClick={loadSettlements} className="p-3 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all shadow-sm"><RefreshCcw size={16} /></button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-neutral-50 text-[10px] uppercase font-black text-neutral-400 border-b border-neutral-100">
+                            <tr>
+                                <th className="px-10 py-5">Settlement ID</th>
+                                <th className="px-10 py-5">Partner Node</th>
+                                <th className="px-10 py-5 text-right">Requested Amount</th>
+                                <th className="px-10 py-5 text-center">Protocol Status</th>
+                                <th className="px-10 py-5 text-right">Timestamp</th>
+                                <th className="px-10 py-5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-50">
+                            {loading ? (
+                                <tr><td colSpan={6} className="px-10 py-20 text-center text-neutral-300 uppercase font-black text-xs animate-pulse tracking-widest">Scanning Settlement Signal...</td></tr>
+                            ) : settlements.length === 0 ? (
+                                <tr><td colSpan={6} className="px-10 py-20 text-center text-neutral-400 font-bold uppercase text-[10px]">No settlement requests detected in sector.</td></tr>
+                            ) : (
+                                settlements.map((s) => (
+                                    <tr key={s._id} className="hover:bg-neutral-50/50 transition-all group">
+                                        <td className="px-10 py-6">
+                                            <p className="font-mono text-xs font-black text-neutral-500">{s.settlementId}</p>
+                                        </td>
+                                        <td className="px-10 py-6">
+                                            <p className="font-black text-neutral-800 text-xs uppercase">{s.partnerId?.name}</p>
+                                            <p className="text-[10px] font-bold text-neutral-400 mt-1">{s.partnerId?.referralCode} • {s.partnerId?.type}</p>
+                                        </td>
+                                        <td className="px-10 py-6 text-right">
+                                            <p className="text-xl font-black text-neutral-900">{currencySymbol}{s.amount.toFixed(2)}</p>
+                                        </td>
+                                        <td className="px-10 py-6 text-center">
+                                            <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                s.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                                                s.status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' :
+                                                s.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>{s.status}</span>
+                                        </td>
+                                        <td className="px-10 py-6 text-right text-[10px] font-black text-neutral-400 uppercase tracking-tighter">
+                                            {new Date(s.requestedAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-10 py-6 text-right">
+                                            <button onClick={() => setSelected(s)} className="p-2.5 bg-neutral-100 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-white border border-transparent hover:border-neutral-200 transition-all shadow-sm"><ChevronRight size={16} /></button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {selected && (
+                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xl flex items-center justify-center p-8 overflow-y-auto">
+                    <div className="bg-white rounded-[56px] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-neutral-100">
+                        <div className="p-12 border-b bg-neutral-50/50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tight">Settlement Case Details</h3>
+                                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-1">ID: {selected.settlementId}</p>
+                            </div>
+                            <button onClick={() => setSelected(null)} className="p-4 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={32} className="text-neutral-300" /></button>
+                        </div>
+
+                        <div className="p-12 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            <div className="space-y-10">
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest mb-6">Partner Information</h4>
+                                    <div className="grid grid-cols-2 gap-6 text-sm">
+                                        <DetailRow label="Name" value={selected.partnerId?.name} highlight />
+                                        <DetailRow label="Type" value={selected.partnerId?.type} />
+                                        <DetailRow label="Lifetime Yield" value={`${currencySymbol}${selected.partnerId?.balance?.lifetime?.toFixed(2)}`} />
+                                        <DetailRow label="Available to Pay" value={`${currencySymbol}${selected.partnerId?.balance?.available?.toFixed(2)}`} highlight color="text-green-600" />
+                                    </div>
+                                    <div className="mt-8 grid grid-cols-3 gap-4 border-t pt-8 border-neutral-100">
+                                        <MiniStat label="Qualified" value={selected.partnerId?.stats?.qualifiedUsers || 0} />
+                                        <MiniStat label="Rewarded" value={selected.partnerId?.stats?.rewardedJobs || 0} />
+                                        <MiniStat label="Conversion" value={`${selected.partnerId?.stats?.conversionRate?.toFixed(1) || 0}%`} />
+                                    </div>
+                                </div>
+
+                                <div className="p-8 bg-blue-50 rounded-[32px] border border-blue-100 space-y-6">
+                                    <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2">
+                                        <Landmark size={14} /> Banking Destination Protocol
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-y-6 text-xs">
+                                        <DetailRow label="Bank Name" value={selected.bankDetails.bankName} highlight />
+                                        <DetailRow label="Account Holder" value={selected.bankDetails.accountHolder} />
+                                        <DetailRow label="Account Number" value={selected.bankDetails.accountNumber} highlight />
+                                        <DetailRow label="Branch / Type" value={`${selected.bankDetails.branchCode} • ${selected.bankDetails.accountType}`} />
+                                    </div>
+                                </div>
+
+                                {selected.auditLog?.length > 0 && (
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Protocol Audit Trail</h4>
+                                        <div className="space-y-4 max-h-40 overflow-y-auto pr-2 scrollbar-hide">
+                                            {selected.auditLog.map((log:any, idx:number) => (
+                                                <div key={idx} className="flex gap-4 items-start p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                                                    <div className="p-2 bg-white rounded-lg shadow-sm border border-neutral-100 text-[8px] font-black uppercase">{idx+1}</div>
+                                                    <div>
+                                                        <p className="font-black text-[9px] uppercase text-neutral-900">{log.action}</p>
+                                                        <p className="text-[9px] text-neutral-500 mt-0.5">{new Date(log.timestamp).toLocaleString()} • {log.note || 'No notes'}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-10">
+                                <div className="bg-neutral-900 p-10 rounded-[48px] text-white space-y-8 shadow-2xl relative overflow-hidden">
+                                     <div className="relative z-10">
+                                        <p className="text-[10px] font-black uppercase text-white/30 tracking-widest italic mb-2">Requested Signal</p>
+                                        <h4 className="text-6xl font-black tracking-tighter leading-none">{currencySymbol}{selected.amount.toFixed(2)}</h4>
+                                        <p className="text-xs font-bold text-neutral-400 mt-6 uppercase tracking-widest">Status: <span className="text-orange-400">{selected.status}</span></p>
+                                     </div>
+                                     <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                                </div>
+
+                                <div className="space-y-4">
+                                     <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-widest ml-1 mb-4">Authorized Administrative Actions</h4>
+                                     <div className="grid grid-cols-2 gap-4">
+                                         {selected.status === 'PENDING' && (
+                                             <button onClick={() => handleUpdateStatus(selected._id, 'APPROVED')} className="py-4 bg-green-50 text-green-700 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-green-200 hover:bg-green-600 hover:text-white transition-all">Approve Request</button>
+                                         )}
+                                         {(selected.status === 'PENDING' || selected.status === 'APPROVED') && (
+                                             <button onClick={() => handleUpdateStatus(selected._id, 'PROCESSING')} className="py-4 bg-blue-50 text-blue-700 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-200 hover:bg-blue-600 hover:text-white transition-all">Mark as Processing</button>
+                                         )}
+                                         {(selected.status === 'PROCESSING' || selected.status === 'APPROVED') && (
+                                             <button onClick={() => handleUpdateStatus(selected._id, 'PAID')} className="py-4 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all col-span-2">Finalize & Mark as Paid</button>
+                                         )}
+                                         {(selected.status === 'PENDING' || selected.status === 'APPROVED' || selected.status === 'PROCESSING') && (
+                                             <button onClick={() => handleUpdateStatus(selected._id, 'REJECTED')} className="py-4 bg-red-50 text-red-700 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-600 hover:text-white transition-all col-span-2">Reject with Prejudice</button>
+                                         )}
+                                     </div>
+                                </div>
+
+                                <div className="p-8 bg-neutral-50 rounded-[32px] border border-neutral-100 flex items-start gap-4">
+                                     <ShieldAlert size={20} className="text-neutral-400 mt-1" />
+                                     <p className="text-[10px] font-medium leading-relaxed text-neutral-500 italic uppercase">Warning: Financial actions are irreversible and generate immutable ledger entries in both Partner and Platform accounts.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DetailRow({ label, value, highlight, color = 'text-neutral-900' }: any) {
+    return (
+        <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-neutral-400 tracking-widest">{label}</p>
+            <p className={`${highlight ? 'font-black text-sm' : 'font-bold text-xs'} ${color} uppercase`}>{value || 'N/A'}</p>
         </div>
     );
 }
