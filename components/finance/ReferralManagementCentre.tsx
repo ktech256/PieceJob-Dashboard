@@ -27,7 +27,8 @@ import {
   Send,
   UserPlus,
   Target,
-  PlayCircle
+  PlayCircle,
+  Landmark
 } from 'lucide-react';
 
 export default function ReferralManagementCentre({ countryCode, currencySymbol }: { countryCode: string, currencySymbol: string }) {
