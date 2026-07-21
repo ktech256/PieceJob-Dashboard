@@ -76,6 +76,8 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
         totalReferrals: partners.reduce((acc, p) => acc + (p.totalReferrals || 0), 0),
         activeLeads: partners.reduce((acc, p) => acc + (p.activeReferrals || 0), 0),
         pendingYield: partners.reduce((acc, p) => acc + (p.pendingCommission || 0), 0),
+        totalJobs: partners.reduce((acc, p) => acc + (p.jobsLifetime || 0), 0),
+        totalRevenue: partners.reduce((acc, p) => acc + (p.revenueGenerated || 0), 0),
     };
 
     return (
@@ -87,12 +89,12 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
                     <p className="text-3xl font-black mt-2">{aggregateStats.totalEarnings.toFixed(2)} R</p>
                 </div>
                 <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
-                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Network Referrals</p>
-                    <p className="text-3xl font-black mt-2 text-neutral-900">{aggregateStats.totalReferrals}</p>
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Platform Revenue</p>
+                    <p className="text-3xl font-black mt-2 text-neutral-900">{aggregateStats.totalRevenue.toFixed(2)} R</p>
                 </div>
                 <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
-                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Active Lead Volume</p>
-                    <p className="text-3xl font-black mt-2 text-green-600">{aggregateStats.activeLeads}</p>
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Network Jobs</p>
+                    <p className="text-3xl font-black mt-2 text-green-600">{aggregateStats.totalJobs}</p>
                 </div>
                 <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
                     <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Pending Commission</p>
@@ -234,7 +236,16 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
         countryCode: countryCode,
         commissionModel: 'FIXED',
         commissionValue: 50,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        commissionSettings: {
+            customerReward: 10,
+            providerReward: 20,
+            businessReward: 50,
+            maxRewardableJobs: 5,
+            customerEnabled: true,
+            providerEnabled: true,
+            businessEnabled: true
+        }
     });
 
     const [saving, setSaving] = useState(false);
@@ -263,56 +274,119 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
 
     return (
         <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
-            <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-[40px] w-full max-w-3xl shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tight">Onboard Affiliate Partner</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tight">{partner ? 'Edit' : 'Onboard'} Affiliate Partner</h3>
                         <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Assign to Node: {countryCode}</p>
                     </div>
                     <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
                 </div>
 
-                <div className="p-10 grid grid-cols-2 gap-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                <div className="p-10 grid grid-cols-2 gap-x-10 gap-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
                     <div className="col-span-2">
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner / Entity Name *</label>
-                        <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all" placeholder="e.g. Acme Marketing" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2">Entity Profile</h4>
+                        <div className="grid grid-cols-2 gap-6 p-6 bg-neutral-50 rounded-[32px] border border-neutral-100">
+                            <div className="col-span-2">
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner / Entity Name *</label>
+                                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all" placeholder="e.g. Acme Marketing" />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Contact Person *</label>
+                                <input type="text" value={form.contactPerson} onChange={e => setForm({...form, contactPerson: e.target.value})} className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="Full Name" />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner Type</label>
+                                <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all">
+                                    <option value="Influencer">Influencer</option>
+                                    <option value="Media House">Media House</option>
+                                    <option value="Marketing Agency">Marketing Agency</option>
+                                    <option value="Corporate">Corporate</option>
+                                    <option value="Referral Agent">Referral Agent</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Email Address *</label>
+                                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="partner@example.com" />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Phone Number *</label>
+                                <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="+27..." />
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Contact Person *</label>
-                        <input type="text" value={form.contactPerson} onChange={e => setForm({...form, contactPerson: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="Full Name" />
-                    </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Company (Optional)</label>
-                        <input type="text" value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="Legal Entity Name" />
-                    </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Email Address *</label>
-                        <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="partner@example.com" />
-                    </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Phone Number *</label>
-                        <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="+27..." />
-                    </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner Type</label>
-                        <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all">
-                            <option value="Influencer">Influencer</option>
-                            <option value="Media House">Media House</option>
-                            <option value="Marketing Agency">Marketing Agency</option>
-                            <option value="Corporate">Corporate</option>
-                            <option value="Referral Agent">Referral Agent</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Commission Yield (Fixed R)</label>
-                        <input type="number" value={form.commissionValue} onChange={e => setForm({...form, commissionValue: parseFloat(e.target.value)})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all" />
+
+                    <div className="col-span-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-customer-red mb-2">Referral Reward Configuration</h4>
+                        <div className="grid grid-cols-2 gap-6 p-8 bg-brand-customer-red/[0.02] rounded-[32px] border border-brand-customer-red/10">
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Customer Reward (R)</label>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <input
+                                        type="number"
+                                        value={form.commissionSettings.customerReward}
+                                        onChange={e => setForm({...form, commissionSettings: {...form.commissionSettings, customerReward: parseFloat(e.target.value)}})}
+                                        className="flex-1 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-brand-customer-red transition-all"
+                                    />
+                                    <button
+                                        onClick={() => setForm({...form, commissionSettings: {...form.commissionSettings, customerEnabled: !form.commissionSettings.customerEnabled}})}
+                                        className={`px-3 py-3 rounded-xl border text-[8px] font-black uppercase transition-all ${form.commissionSettings.customerEnabled ? 'bg-green-50 border-green-200 text-green-600' : 'bg-neutral-100 border-neutral-200 text-neutral-400'}`}
+                                    >
+                                        {form.commissionSettings.customerEnabled ? 'ON' : 'OFF'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Provider Reward (R)</label>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <input
+                                        type="number"
+                                        value={form.commissionSettings.providerReward}
+                                        onChange={e => setForm({...form, commissionSettings: {...form.commissionSettings, providerReward: parseFloat(e.target.value)}})}
+                                        className="flex-1 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-brand-customer-red transition-all"
+                                    />
+                                    <button
+                                        onClick={() => setForm({...form, commissionSettings: {...form.commissionSettings, providerEnabled: !form.commissionSettings.providerEnabled}})}
+                                        className={`px-3 py-3 rounded-xl border text-[8px] font-black uppercase transition-all ${form.commissionSettings.providerEnabled ? 'bg-green-50 border-green-200 text-green-600' : 'bg-neutral-100 border-neutral-200 text-neutral-400'}`}
+                                    >
+                                        {form.commissionSettings.providerEnabled ? 'ON' : 'OFF'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Business Reward (R)</label>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <input
+                                        type="number"
+                                        value={form.commissionSettings.businessReward}
+                                        onChange={e => setForm({...form, commissionSettings: {...form.commissionSettings, businessReward: parseFloat(e.target.value)}})}
+                                        className="flex-1 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-brand-customer-red transition-all"
+                                    />
+                                    <button
+                                        onClick={() => setForm({...form, commissionSettings: {...form.commissionSettings, businessEnabled: !form.commissionSettings.businessEnabled}})}
+                                        className={`px-3 py-3 rounded-xl border text-[8px] font-black uppercase transition-all ${form.commissionSettings.businessEnabled ? 'bg-green-50 border-green-200 text-green-600' : 'bg-neutral-100 border-neutral-200 text-neutral-400'}`}
+                                    >
+                                        {form.commissionSettings.businessEnabled ? 'ON' : 'OFF'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Max Rewardable Jobs</label>
+                                <input
+                                    type="number"
+                                    value={form.commissionSettings.maxRewardableJobs}
+                                    onChange={e => setForm({...form, commissionSettings: {...form.commissionSettings, maxRewardableJobs: parseInt(e.target.value)}})}
+                                    className="w-full mt-2 bg-white border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black outline-none focus:border-brand-customer-red transition-all"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
                     <button onClick={onClose} disabled={saving} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all">Cancel</button>
                     <button onClick={handleSave} disabled={saving} className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl disabled:opacity-50">
-                        {saving ? 'Processing...' : 'Activate Partner Protocol'}
+                        {saving ? 'Processing...' : partner ? 'Commit Profile Updates' : 'Activate Partner Protocol'}
                     </button>
                 </div>
             </div>
