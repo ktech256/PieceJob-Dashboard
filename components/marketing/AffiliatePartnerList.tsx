@@ -123,6 +123,7 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
         name: '',
         company: '',
         type: 'Influencer',
+        contactPerson: '',
         email: '',
         phone: '',
         countryCode: countryCode,
@@ -131,18 +132,29 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
         status: 'ACTIVE'
     });
 
+    const [saving, setSaving] = useState(false);
+
     const handleSave = async () => {
+        if (!form.name || !form.email || !form.phone || !form.contactPerson) {
+            alert('Please fill in all mandatory fields.');
+            return;
+        }
+
+        setSaving(true);
         try {
             await api.post('/api/v1/affiliate/admin', form);
             onSave();
-        } catch (e) {
-            alert('Failed to save partner');
+        } catch (e: any) {
+            const errorMsg = e.response?.data?.message || 'Failed to onboard partner. Please verify if email/phone is already in use.';
+            alert(errorMsg);
+        } finally {
+            setSaving(false);
         }
     };
 
     return (
         <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
-            <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden text-neutral-900">
+            <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
                 <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tight">Onboard Affiliate Partner</h3>
@@ -151,37 +163,48 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
                     <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
                 </div>
 
-                <div className="p-10 grid grid-cols-2 gap-6">
+                <div className="p-10 grid grid-cols-2 gap-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
                     <div className="col-span-2">
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner / Entity Name</label>
-                        <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all" />
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner / Entity Name *</label>
+                        <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all" placeholder="e.g. Acme Marketing" />
                     </div>
                     <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Email Address</label>
-                        <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all" />
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Contact Person *</label>
+                        <input type="text" value={form.contactPerson} onChange={e => setForm({...form, contactPerson: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="Full Name" />
                     </div>
                     <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Phone Number</label>
-                        <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-brand-customer-red transition-all" />
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Company (Optional)</label>
+                        <input type="text" value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="Legal Entity Name" />
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Email Address *</label>
+                        <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="partner@example.com" />
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Phone Number *</label>
+                        <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all" placeholder="+27..." />
                     </div>
                     <div>
                         <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Partner Type</label>
-                        <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all">
+                        <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all">
                             <option value="Influencer">Influencer</option>
                             <option value="Media House">Media House</option>
                             <option value="Marketing Agency">Marketing Agency</option>
                             <option value="Corporate">Corporate</option>
+                            <option value="Referral Agent">Referral Agent</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Commission Yield</label>
-                        <input type="number" value={form.commissionValue} onChange={e => setForm({...form, commissionValue: e.target.value})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-brand-customer-red transition-all" />
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Commission Yield (Fixed R)</label>
+                        <input type="number" value={form.commissionValue} onChange={e => setForm({...form, commissionValue: parseFloat(e.target.value)})} className="w-full mt-2 bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-3 text-xs font-black uppercase outline-none focus:border-neutral-900 transition-all" />
                     </div>
                 </div>
 
                 <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
-                    <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px]">Cancel</button>
-                    <button onClick={handleSave} className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl">Activate Partner</button>
+                    <button onClick={onClose} disabled={saving} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all">Cancel</button>
+                    <button onClick={handleSave} disabled={saving} className="flex-[2] bg-neutral-900 text-white h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl disabled:opacity-50">
+                        {saving ? 'Processing...' : 'Activate Partner Protocol'}
+                    </button>
                 </div>
             </div>
         </div>
