@@ -264,12 +264,6 @@ export default function PartnerAnalyticsDetail({ partnerId, onClose }: { partner
     );
 }
 
-                </div>
-            </div>
-        </div>
-    );
-}
-
 function MetricCard({ title, value, sub, icon, trend }: any) {
     return (
         <div className="bg-white p-8 rounded-[36px] border border-neutral-100 shadow-sm flex flex-col gap-6 group hover:shadow-xl hover:-translate-y-1 transition-all">
