@@ -207,8 +207,8 @@ export default function PartnerAnalyticsDetail({ partnerId, onClose }: { partner
                                         <tr className="text-[9px] font-black uppercase text-neutral-400 bg-neutral-50/50">
                                             <th className="px-10 py-6">Referred Participant</th>
                                             <th className="px-10 py-6">Lifecycle Metrics</th>
-                                            <th className="px-10 py-6">Revenue Attribution</th>
                                             <th className="px-10 py-6">Commission Yield</th>
+                                            <th className="px-10 py-6">Platform Revenue</th>
                                             <th className="px-10 py-6 text-right">Status</th>
                                         </tr>
                                     </thead>

@@ -226,26 +226,32 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
 }
 
 function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
-    const [form, setForm] = useState(partner || {
-        name: '',
-        company: '',
-        type: 'Influencer',
-        contactPerson: '',
-        email: '',
-        phone: '',
-        countryCode: countryCode,
-        commissionModel: 'FIXED',
-        commissionValue: 50,
-        status: 'ACTIVE',
-        commissionSettings: {
-            customerReward: 10,
-            providerReward: 20,
-            businessReward: 50,
-            maxRewardableJobs: 5,
-            customerEnabled: true,
-            providerEnabled: true,
-            businessEnabled: true
-        }
+    const [form, setForm] = useState(() => {
+        const base = partner || {
+            name: '',
+            company: '',
+            type: 'Influencer',
+            contactPerson: '',
+            email: '',
+            phone: '',
+            countryCode: countryCode,
+            commissionModel: 'FIXED',
+            commissionValue: 50,
+            status: 'ACTIVE'
+        };
+
+        return {
+            ...base,
+            commissionSettings: base.commissionSettings || {
+                customerReward: 10,
+                providerReward: 20,
+                businessReward: 50,
+                maxRewardableJobs: 5,
+                customerEnabled: true,
+                providerEnabled: true,
+                businessEnabled: true
+            }
+        };
     });
 
     const [saving, setSaving] = useState(false);
@@ -258,10 +264,16 @@ function PartnerModal({ partner, countryCode, onClose, onSave }: any) {
 
         setSaving(true);
         try {
+            const payload = { ...form };
+            delete payload._id;
+            delete payload.id;
+            delete payload.stats;
+            delete payload.balance;
+
             if (partner?._id) {
-                await api.patch(`/api/v1/affiliate/admin/${partner._id}`, form);
+                await api.patch(`/api/v1/affiliate/admin/${partner._id}`, payload);
             } else {
-                await api.post('/api/v1/affiliate/admin', form);
+                await api.post('/api/v1/affiliate/admin', payload);
             }
             onSave();
         } catch (e: any) {
