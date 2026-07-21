@@ -15,10 +15,7 @@ import {
   Trash2,
   XCircle,
   Copy,
-  Download,
-  ExternalLink,
-  Search,
-  TrendingUp
+  Download
 } from 'lucide-react';
 
 import PartnerAnalyticsDetail from './PartnerAnalyticsDetail';
