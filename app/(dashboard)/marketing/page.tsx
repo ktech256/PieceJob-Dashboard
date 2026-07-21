@@ -124,9 +124,9 @@ function MarketingContent() {
           </button>
           <button
             onClick={() => setActiveTab('affiliates')}
-            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'affiliates' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'affiliates' ? 'bg-neutral-900 text-white shadow-xl shadow-neutral-200' : 'bg-white text-neutral-400 hover:bg-neutral-50 border border-neutral-200'}`}
           >
-            Affiliate Partners
+            Affiliate Matrix
           </button>
           <button
             onClick={() => setActiveTab('notifications')}

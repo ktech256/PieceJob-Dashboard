@@ -71,8 +71,35 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
         document.body.removeChild(link);
     };
 
+    const aggregateStats = {
+        totalEarnings: partners.reduce((acc, p) => acc + (p.earningsLifetime || 0), 0),
+        totalReferrals: partners.reduce((acc, p) => acc + (p.totalReferrals || 0), 0),
+        activeLeads: partners.reduce((acc, p) => acc + (p.activeReferrals || 0), 0),
+        pendingYield: partners.reduce((acc, p) => acc + (p.pendingCommission || 0), 0),
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            {/* ENTERPRISE AGGREGATE DASHBOARD */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-neutral-900 rounded-[32px] p-8 text-white shadow-xl shadow-neutral-200">
+                    <p className="text-[9px] font-black uppercase text-white/40 tracking-[0.2em]">Network Lifetime Yield</p>
+                    <p className="text-3xl font-black mt-2">{aggregateStats.totalEarnings.toFixed(2)} R</p>
+                </div>
+                <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Network Referrals</p>
+                    <p className="text-3xl font-black mt-2 text-neutral-900">{aggregateStats.totalReferrals}</p>
+                </div>
+                <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Active Lead Volume</p>
+                    <p className="text-3xl font-black mt-2 text-green-600">{aggregateStats.activeLeads}</p>
+                </div>
+                <div className="bg-white rounded-[32px] p-8 border border-neutral-200 shadow-sm">
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-[0.2em]">Total Pending Commission</p>
+                    <p className="text-3xl font-black mt-2 text-yellow-600">{aggregateStats.pendingYield.toFixed(2)} R</p>
+                </div>
+            </div>
+
             {/* TOOLBAR */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-6 rounded-[32px] border border-neutral-200 shadow-sm gap-6">
                 <div className="flex items-center gap-4">
