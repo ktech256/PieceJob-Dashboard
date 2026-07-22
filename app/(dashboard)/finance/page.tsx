@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import api from '@/lib/api/axios';
 import { useCountryStore } from '@/lib/store/countryStore';
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowUpRight,
   ArrowRight,
@@ -39,10 +40,12 @@ import {
   Phone,
   Settings2,
   Trophy,
-  PlayCircle
+  PlayCircle,
+  Landmark
 } from 'lucide-react';
 
 import ReferralManagementCentre from '@/components/finance/ReferralManagementCentre';
+import PartnerSettlementConsole from '@/components/finance/PartnerSettlementConsole';
 
 const formatDate = (date: string | Date | undefined) => {
     if (!date) return "N/A";
@@ -90,7 +93,16 @@ const renderActor = (actor: any) => {
 };
 
 export default function FinanceControlCentre() {
-  const [activeTab, setActiveTab] = useState("overview");
+    return (
+        <Suspense fallback={<div>Loading Finance Control...</div>}>
+            <FinanceContent />
+        </Suspense>
+    );
+}
+
+function FinanceContent() {
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "overview");
   const { countryCode, currentCountry } = useCountryStore();
 
   const [stats, setStats] = useState({
@@ -129,6 +141,11 @@ export default function FinanceControlCentre() {
     if (countryCode) fetchOverview();
   }, [countryCode]);
 
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
   const tabs = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard size={14} /> },
     { id: "service-fees", label: "Service Fees", icon: <Coins size={14} /> },
@@ -140,6 +157,7 @@ export default function FinanceControlCentre() {
     { id: "refunds", label: "Refunds", icon: <Undo size={14} /> },
     { id: "bonuses", label: "Bonuses", icon: <Gift size={14} /> },
     { id: "referrals", label: "Referrals", icon: <Users size={14} /> },
+    { id: "partner-settlements", label: "Partner Settlements", icon: <Landmark size={14} /> },
     { id: "escrow", label: "Escrow", icon: <ShieldCheck size={14} /> },
     { id: "audit", label: "Audit Logs", icon: <Activity size={14} /> },
   ];
@@ -194,6 +212,7 @@ export default function FinanceControlCentre() {
       {activeTab === "refunds" && <RefundCentre currencySymbol={stats.currencySymbol} />}
       {activeTab === "bonuses" && <BonusCentre currencySymbol={stats.currencySymbol} />}
       {activeTab === "referrals" && <ReferralManagementCentre countryCode={countryCode} currencySymbol={stats.currencySymbol} />}
+      {activeTab === "partner-settlements" && <PartnerSettlementConsole currencySymbol={stats.currencySymbol} />}
       {activeTab === "escrow" && <EscrowMonitor currencySymbol={stats.currencySymbol} activeEscrow={stats.activeEscrow} />}
       {activeTab === "audit" && <AuditLogsView />}
     </div>

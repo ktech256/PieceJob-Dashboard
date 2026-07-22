@@ -19,6 +19,16 @@ import {
 } from 'lucide-react';
 
 import PartnerAnalyticsDetail from './PartnerAnalyticsDetail';
+import {
+    MoreVertical,
+    Shield,
+    ShieldOff,
+    Ban,
+    Archive,
+    RotateCcw,
+    History,
+    AlertCircle
+} from 'lucide-react';
 
 export default function AffiliatePartnerList({ countryCode }: { countryCode: string }) {
     const [partners, setPartners] = useState<any[]>([]);
@@ -28,6 +38,11 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
     const [viewingPartnerId, setViewingPartnerId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+
+    // Lifecycle states
+    const [showLifecycleModal, setShowLifecycleModal] = useState(false);
+    const [lifecycleAction, setLifecycleAction] = useState<any>(null);
+    const [activeActionMenu, setActiveActionMenu] = useState<string | null>(null);
 
     const loadPartners = async () => {
         setLoading(true);
@@ -166,9 +181,42 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
                                     <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-tight mt-0.5">{partner.type} • {partner.company || 'Private Entity'}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 relative">
                                 <button onClick={() => { setEditingPartner(partner); setShowModal(true); }} className="p-2.5 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"><Edit size={16} /></button>
                                 <button onClick={() => setViewingPartnerId(partner._id)} className="p-2.5 bg-neutral-50 rounded-xl text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><TrendingUp size={16} /></button>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveActionMenu(activeActionMenu === partner._id ? null : partner._id)}
+                                        className="p-2.5 bg-neutral-50 rounded-xl text-neutral-400 hover:text-neutral-900 transition-all"
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button>
+                                    {activeActionMenu === partner._id && (
+                                        <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2">
+                                            {partner.status !== 'SUSPENDED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'SUSPEND' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-amber-600 hover:bg-amber-50 flex items-center gap-2"><Shield size={14} /> Suspend</button>
+                                            )}
+                                            {partner.status === 'SUSPENDED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'UNSUSPEND' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-green-600 hover:bg-green-50 flex items-center gap-2"><ShieldOff size={14} /> Unsuspend</button>
+                                            )}
+                                            {partner.status !== 'BANNED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'BAN' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-red-600 hover:bg-red-50 flex items-center gap-2"><Ban size={14} /> Ban</button>
+                                            )}
+                                            {partner.status === 'BANNED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'UNBAN' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-green-600 hover:bg-green-50 flex items-center gap-2"><RotateCcw size={14} /> Unban</button>
+                                            )}
+                                            {partner.status !== 'ARCHIVED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'ARCHIVE' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-neutral-400 hover:bg-neutral-50 flex items-center gap-2"><Archive size={14} /> Archive</button>
+                                            )}
+                                            {partner.status === 'ARCHIVED' && (
+                                                <button onClick={() => { setLifecycleAction({ partner, type: 'RESTORE' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-green-600 hover:bg-green-50 flex items-center gap-2"><RotateCcw size={14} /> Restore</button>
+                                            )}
+                                            <div className="border-t border-neutral-100 my-1"></div>
+                                            <button onClick={() => { setLifecycleAction({ partner, type: 'DELETE' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-neutral-400 hover:bg-red-50 hover:text-red-700 flex items-center gap-2"><Trash2 size={14} /> Soft Delete</button>
+                                            <button onClick={() => { setLifecycleAction({ partner, type: 'PERMANENT_DELETE' }); setShowLifecycleModal(true); setActiveActionMenu(null); }} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-red-700 font-black hover:bg-red-100 flex items-center gap-2"><Trash2 size={14} /> Perm. Delete</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -221,6 +269,147 @@ export default function AffiliatePartnerList({ countryCode }: { countryCode: str
                     onSave={() => { setShowModal(false); loadPartners(); }}
                 />
             )}
+
+            {showLifecycleModal && (
+                <PartnerLifecycleModal
+                    action={lifecycleAction}
+                    onClose={() => setShowLifecycleModal(false)}
+                    onSuccess={() => { setShowLifecycleModal(false); loadPartners(); }}
+                />
+            )}
+        </div>
+    );
+}
+
+function PartnerLifecycleModal({ action, onClose, onSuccess }: any) {
+    const [reason, setReason] = useState('');
+    const [notes, setNotes] = useState('');
+    const [suspendUntil, setSuspendUntil] = useState('');
+    const [confirmText, setConfirmText] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const partner = action.partner;
+    const type = action.type;
+
+    const handleAction = async () => {
+        setSaving(true);
+        try {
+            let status = partner.status;
+            let permanent = false;
+
+            if (type === 'SUSPEND') status = 'SUSPENDED';
+            if (type === 'UNSUSPEND') status = 'ACTIVE';
+            if (type === 'BAN') status = 'BANNED';
+            if (type === 'UNBAN') status = 'ACTIVE';
+            if (type === 'ARCHIVE') status = 'ARCHIVED';
+            if (type === 'RESTORE') status = 'ACTIVE';
+            if (type === 'DELETE') status = 'DELETED';
+            if (type === 'PERMANENT_DELETE') {
+                status = 'DELETED';
+                permanent = true;
+            }
+
+            await api.patch(`/api/v1/affiliate/admin/${partner._id}/status`, {
+                status,
+                reason,
+                notes,
+                suspendUntil,
+                permanent,
+                confirmText
+            });
+
+            onSuccess();
+        } catch (e: any) {
+            alert(e.response?.data?.message || 'Action failed');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const getTitle = () => {
+        if (type === 'SUSPEND') return 'Suspend Partner Protocol';
+        if (type === 'BAN') return 'Execute Permanent Ban';
+        if (type === 'DELETE') return 'Soft Delete Entity';
+        if (type === 'PERMANENT_DELETE') return 'ERASE PARTNER PERMANENTLY';
+        return 'Update Entity Status';
+    };
+
+    const isDestructive = ['SUSPEND', 'BAN', 'DELETE', 'PERMANENT_DELETE'].includes(type);
+
+    return (
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
+            <div className="bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200 border border-neutral-200">
+                <div className="p-10 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                    <div>
+                        <h3 className={`text-xl font-black uppercase tracking-tight ${isDestructive ? 'text-red-600' : 'text-neutral-900'}`}>{getTitle()}</h3>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">Target: {partner.name} ({partner.referralCode})</p>
+                    </div>
+                    <button onClick={onClose} className="p-3 hover:bg-neutral-100 rounded-full transition-colors"><XCircle size={24} className="text-neutral-300" /></button>
+                </div>
+
+                <div className="p-10 space-y-8">
+                    {type === 'PERMANENT_DELETE' && (
+                        <div className="p-6 bg-red-50 border border-red-100 rounded-[24px] space-y-4">
+                            <div className="flex gap-4 text-red-600">
+                                <AlertCircle size={20} />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Permanent Erasure Detected</p>
+                            </div>
+                            <p className="text-xs text-red-900 font-bold leading-relaxed">This action cannot be undone. All personal data will be wiped. Financial and referral logs will be detached but retained for legal auditing. Please type <span className="font-black underline">DELETE</span> to continue.</p>
+                            <input
+                                type="text"
+                                value={confirmText}
+                                onChange={e => setConfirmText(e.target.value)}
+                                placeholder="Type DELETE"
+                                className="w-full bg-white border border-red-200 rounded-xl px-5 py-3 text-xs font-black uppercase text-red-600 outline-none focus:border-red-600 transition-all"
+                            />
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Reason for Action *</label>
+                        <textarea
+                            value={reason}
+                            onChange={e => setReason(e.target.value)}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-bold outline-none focus:border-neutral-900 transition-all resize-none h-24"
+                            placeholder="e.g. Conduct violation, Inactivity, Manual request..."
+                        />
+                    </div>
+
+                    {type === 'SUSPEND' && (
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Suspend Until (Optional)</label>
+                            <input
+                                type="date"
+                                value={suspendUntil}
+                                onChange={e => setSuspendUntil(e.target.value)}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-6 py-3 text-xs font-bold outline-none focus:border-neutral-900 transition-all"
+                            />
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        <label className="text-[9px] font-black uppercase text-neutral-400 ml-1">Internal Audit Notes (Optional)</label>
+                        <input
+                            type="text"
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-6 py-4 text-xs font-bold outline-none focus:border-neutral-900 transition-all"
+                            placeholder="Supporting documentation, ticket refs..."
+                        />
+                    </div>
+                </div>
+
+                <div className="p-10 border-t border-neutral-100 bg-neutral-50/50 flex gap-4">
+                    <button onClick={onClose} className="flex-1 bg-white border border-neutral-200 text-neutral-500 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-neutral-50 transition-all">Cancel</button>
+                    <button
+                        onClick={handleAction}
+                        disabled={saving || (type === 'PERMANENT_DELETE' && confirmText !== 'DELETE') || !reason}
+                        className={`flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-xl disabled:opacity-50 ${isDestructive ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-neutral-900 text-white hover:bg-black'}`}
+                    >
+                        {saving ? 'Processing Encryption...' : 'Commit Status Change'}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

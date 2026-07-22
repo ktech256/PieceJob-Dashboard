@@ -33,7 +33,8 @@ import {
   Gift,
   Mail,
   Trophy,
-  Users
+  Users,
+  Landmark
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -78,6 +79,7 @@ export default function DashboardLayout({
     { name: "Affiliate Partners", href: "/marketing?tab=affiliates", icon: <Users size={18} /> },
     { name: "Email Centre", href: "/marketing?tab=email", icon: <Mail size={18} /> },
     { name: "Referrals", href: "/marketing?tab=referrals", icon: <Gift size={18} /> },
+    { name: "Partner Settlements", href: "/finance?tab=partner-settlements", icon: <Landmark size={18} /> },
     { name: "Finance", href: "/finance", icon: <Wallet size={18} /> },
     { name: "Workspace Settings", href: "/settings", icon: <Settings size={18} /> },
     { name: "Performance Appeals", href: "/performance/appeals", icon: <ShieldAlert size={18} /> },
