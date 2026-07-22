@@ -11,7 +11,10 @@ export default function AffiliateSettingsTab({ countryCode }: { countryCode: str
         referralRewardBusiness: 50,
         referralMaxRewardsPerUser: 5,
         referralMinCompletedJobs: 1,
-        referralProgramEnabled: true
+        referralProgramEnabled: true,
+        referralRewardDelayDays: 0,
+        referralExpiryDays: 0,
+        minimumWithdrawalAmount: 50
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -127,6 +130,36 @@ export default function AffiliateSettingsTab({ countryCode }: { countryCode: str
                                 type="number"
                                 value={settings.referralMinCompletedJobs}
                                 onChange={e => setSettings({...settings, referralMinCompletedJobs: parseInt(e.target.value)})}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase text-neutral-400 ml-1">Payout Delay (Days)</label>
+                            <input
+                                type="number"
+                                value={settings.referralRewardDelayDays}
+                                onChange={e => setSettings({...settings, referralRewardDelayDays: parseInt(e.target.value)})}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase text-neutral-400 ml-1">Referral Expiry (Days)</label>
+                            <input
+                                type="number"
+                                value={settings.referralExpiryDays}
+                                onChange={e => setSettings({...settings, referralExpiryDays: parseInt(e.target.value)})}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase text-neutral-400 ml-1">Minimum Withdrawal Amount (R)</label>
+                            <input
+                                type="number"
+                                value={settings.minimumWithdrawalAmount}
+                                onChange={e => setSettings({...settings, minimumWithdrawalAmount: parseFloat(e.target.value)})}
                                 className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-4 text-xs font-black outline-none focus:border-neutral-900 transition-all"
                             />
                         </div>
