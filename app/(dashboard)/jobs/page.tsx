@@ -195,6 +195,12 @@ export default function JobsMonitoring() {
                                   {job.providerId?.firstName ? `${job.providerId.firstName} ${job.providerId.lastName}` : 'Waiting...'}
                               </td>
                               <td className="px-8 py-5 text-neutral-900">
+                                  {job.isForSomeoneElse && (
+                                      <div className="flex items-center gap-1 text-amber-600 mb-1" title="Third Party Booking">
+                                          <Users size={12} strokeWidth={3} />
+                                          <span className="text-[8px] font-black uppercase">Recipient</span>
+                                      </div>
+                                  )}
                                   {formatCurrency(job.bookingFee + (job.serviceFee || 0), getCurrency(job))}
                               </td>
                               <td className="px-8 py-5">
@@ -400,6 +406,19 @@ function JobDetailsModal({ jobId, onClose }: { jobId: string, onClose: () => voi
                                             <p className="font-black">{job.providerId?.firstName ? `${job.providerId.firstName} ${job.providerId.lastName}` : 'UNASSIGNED'}</p>
                                         </div>
                                     </div>
+
+                                    {job.isForSomeoneElse && (
+                                        <div className="pt-4 border-t border-dashed mt-4">
+                                            <div className="flex items-center gap-4 text-amber-600">
+                                                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center font-black"><Users size={20} /></div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase">Recipient (Third Party)</p>
+                                                    <p className="font-black">{job.recipientName || 'N/A'}</p>
+                                                    <p className="text-xs font-bold font-mono">{job.recipientPhone || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </DetailCard>
                         </div>
